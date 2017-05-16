@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The LineageOS Project
+ * Copyright (C) 2019 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +28,7 @@ public final class TabUtils {
         if (url != null && !url.isEmpty()) {
             intent.setData(Uri.parse(url));
         }
+        intent.setAction(Intent.ACTION_MAIN);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
         intent.putExtra(IntentUtils.EXTRA_INCOGNITO, incognito);
         context.startActivity(intent);

@@ -61,6 +61,10 @@
     <string name="pref_do_not_track_title">No rastrear</string>
     <string name="pref_do_not_track_summary">Envía una solicitud para evitar el rastreo en los sitios web que visite</string>
     <string name="pref_suggestions_provider">Proveedor de sugerencias</string>
+    <string name="pref_incognito_policy">Predeterminado a modo incógnito</string>
+    <string name="never">Nunca</string>
+    <string name="Always">Siempre</string>
+    <string name="open_from_other_app">Cuando se abra un enlace desde otra aplicación</string>
     <string name="history_title">Historial</string>
     <string name="history_empty">Nada por aquí, navegue por Internet para ver en esta pestaña su historial</string>
     <string name="history_date_format">EEEE dd MMMM yyyy, HH:mm</string>
