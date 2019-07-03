@@ -27,7 +27,4 @@
         <item>1</item>
         <item>2</item>
     </string-array>
-    <string name="never">Never</string>
-    <string name="Always">Always</string>
-    <string name="open_from_other_app">When opening a link from another app</string>
 </resources>

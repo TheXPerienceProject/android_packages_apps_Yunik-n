@@ -123,6 +123,9 @@
     <string name="pref_clear_text_traffic_summary_off">Clear text traffic (such as http) is not allowed</string>
     <!-- Settings: default to incognito -->
     <string name="pref_incognito_policy">Default to incognito</string>
+    <string name="never">Never</string>
+    <string name="Always">Always</string>
+    <string name="open_from_other_app">When opening a link from another app</string>
 
     <!-- History: title -->
     <string name="history_title">History</string>
