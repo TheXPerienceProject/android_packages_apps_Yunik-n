@@ -21,7 +21,7 @@ LOCAL_RESOURCE_DIR := $(LOCAL_PATH)/res
 
 LOCAL_SRC_FILES := \
     $(call all-java-files-under, java) \
-    $(call all-java-files-under, java_lineage)
+    $(call all-java-files-under, java_xperience)
 
 LOCAL_USE_AAPT2 := true
 
