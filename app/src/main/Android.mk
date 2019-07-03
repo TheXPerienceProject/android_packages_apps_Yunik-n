@@ -34,7 +34,7 @@ LOCAL_STATIC_ANDROID_LIBRARIES := \
     androidx.transition_transition \
     com.google.android.material_material
 
-LOCAL_PACKAGE_NAME := Jelly
+LOCAL_PACKAGE_NAME := Yunikon
 
 LOCAL_PRIVATE_PLATFORM_APIS := true
 
