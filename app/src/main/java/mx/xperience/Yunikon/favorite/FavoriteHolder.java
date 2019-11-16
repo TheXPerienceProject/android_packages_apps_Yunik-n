@@ -19,14 +19,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
-import androidx.cardview.widget.CardView;
-import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.widget.TextView;
 
 import mx.xperience.Yunikon.MainActivity;
 import mx.xperience.Yunikon.R;
 import mx.xperience.Yunikon.utils.UiUtils;
+
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.RecyclerView;
 
 class FavoriteHolder extends RecyclerView.ViewHolder {
     private final CardView mCard;

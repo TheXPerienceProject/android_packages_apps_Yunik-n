@@ -16,14 +16,14 @@
 package mx.xperience.Yunikon.ui;
 
 import android.content.Context;
-import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import mx.xperience.Yunikon.R;
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 
 public class KeyValueView extends LinearLayout {
     private TextView mKeyView;

@@ -22,10 +22,6 @@ import android.preference.Preference;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.SwitchPreference;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.webkit.CookieManager;
@@ -37,6 +33,11 @@ import mx.xperience.Yunikon.utils.IntentUtils;
 import mx.xperience.Yunikon.utils.NetworkSecurityPolicyUtils;
 import mx.xperience.Yunikon.utils.PrefsUtils;
 import mx.xperience.Yunikon.utils.UiUtils;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class SettingsActivity extends AppCompatActivity {
 

@@ -18,8 +18,8 @@ package mx.xperience.Yunikon.webview;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.os.Message;
 import android.net.Uri;
+import android.os.Message;
 import android.view.View;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
@@ -28,7 +28,6 @@ import android.webkit.WebView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import mx.xperience.Yunikon.MainActivity;
 import mx.xperience.Yunikon.R;
 import mx.xperience.Yunikon.history.HistoryProvider;
 import mx.xperience.Yunikon.ui.UrlBarController;

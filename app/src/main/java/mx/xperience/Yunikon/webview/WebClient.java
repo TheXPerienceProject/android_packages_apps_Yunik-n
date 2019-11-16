@@ -25,8 +25,6 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.net.Uri;
-import com.google.android.material.snackbar.Snackbar;
-import androidx.appcompat.app.AlertDialog;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -43,6 +41,10 @@ import mx.xperience.Yunikon.R;
 import mx.xperience.Yunikon.ui.UrlBarController;
 import mx.xperience.Yunikon.utils.IntentUtils;
 import mx.xperience.Yunikon.utils.UrlUtils;
+
+import androidx.appcompat.app.AlertDialog;
+
+import com.google.android.material.snackbar.Snackbar;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;

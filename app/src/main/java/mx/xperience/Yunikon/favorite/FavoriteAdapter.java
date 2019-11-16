@@ -17,11 +17,13 @@ package mx.xperience.Yunikon.favorite;
 
 import android.content.Context;
 import android.database.Cursor;
-import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
 import mx.xperience.Yunikon.R;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 class FavoriteAdapter extends RecyclerView.Adapter<FavoriteHolder> {
     private final Context mContext;
@@ -54,6 +56,7 @@ class FavoriteAdapter extends RecyclerView.Adapter<FavoriteHolder> {
         notifyDataSetChanged();
     }
 
+    @NonNull
     @Override
     public FavoriteHolder onCreateViewHolder(ViewGroup parent, int type) {
         return new FavoriteHolder(LayoutInflater.from(parent.getContext())
@@ -61,7 +64,7 @@ class FavoriteAdapter extends RecyclerView.Adapter<FavoriteHolder> {
     }
 
     @Override
-    public void onBindViewHolder(FavoriteHolder holder, int position) {
+    public void onBindViewHolder(@NonNull FavoriteHolder holder, int position) {
         if (!mCursor.moveToPosition(position)) {
             return;
         }

@@ -34,15 +34,6 @@ public final class PrefsUtils {
     private static final String KEY_SUGGESTION_PROVIDER = "key_suggestion_provider";
     private static final String KEY_INCOGNITO_POLICY = "key_incognito_policy";
 
-    public enum SuggestionProviderType {
-        BAIDU,
-        BING,
-        DUCK,
-        GOOGLE,
-        YAHOO,
-        NONE
-    }
-
     private PrefsUtils() {
     }
 
@@ -90,10 +81,8 @@ public final class PrefsUtils {
     public static SuggestionProviderType getSuggestionProvider(Context context) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         try {
-            String value = prefs.getString(KEY_SUGGESTION_PROVIDER, null);
-            if (value == null) {
-                value = context.getString(R.string.default_suggestion_provider);
-            }
+            String value = prefs.getString(KEY_SUGGESTION_PROVIDER,
+                    context.getString(R.string.default_suggestion_provider));
             return SuggestionProviderType.valueOf(value);
         } catch (IllegalArgumentException ignored) {
             return SuggestionProviderType.NONE;
@@ -108,5 +97,14 @@ public final class PrefsUtils {
     public static void setHomePage(Context context, String value) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         prefs.edit().putString(KEY_HOME_PAGE, value).apply();
+    }
+
+    public enum SuggestionProviderType {
+        BAIDU,
+        BING,
+        DUCK,
+        GOOGLE,
+        YAHOO,
+        NONE
     }
 }
