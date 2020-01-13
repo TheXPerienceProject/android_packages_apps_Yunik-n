@@ -191,7 +191,7 @@ public class HistoryProvider extends ContentProvider {
     }
 
     public interface Columns extends BaseColumns {
-        String AUTHORITY = "mx.xperience.yunikon.history";
+        String AUTHORITY = "mx.xperience.Yunikon.history";
         Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/history");
 
         String TITLE = "title";

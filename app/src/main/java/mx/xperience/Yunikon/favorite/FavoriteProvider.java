@@ -197,7 +197,7 @@ public class FavoriteProvider extends ContentProvider {
     }
 
     public interface Columns extends BaseColumns {
-        String AUTHORITY = "mx.xperience.yunikon.favorite";
+        String AUTHORITY = "mx.xperience.Yunikon.favorite";
         Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/favorite");
 
         String TITLE = "title";
