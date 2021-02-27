@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,66 +14,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.history;
+package mx.xperience.Yunikon.history
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
-import android.view.View;
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
+import android.view.View
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.ItemDecoration
+import mx.xperience.Yunikon.R
 
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.RecyclerView;
-
-import mx.xperience.Yunikon.R;
-
-class HistoryAnimationDecorator extends RecyclerView.ItemDecoration {
-
-    private final Drawable mBackground;
-
-    HistoryAnimationDecorator(Context context) {
-        mBackground = new ColorDrawable(ContextCompat.getColor(context, R.color.colorDelete));
-    }
-
-    @Override
-    public void onDraw(@NonNull Canvas c, RecyclerView parent, @NonNull RecyclerView.State state) {
-        if (!parent.getItemAnimator().isRunning()) {
-            super.onDraw(c, parent, state);
-            return;
+internal class HistoryAnimationDecorator(context: Context?) : ItemDecoration() {
+    private val mBackground: Drawable
+    override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+        if (!parent.itemAnimator!!.isRunning) {
+            super.onDraw(c, parent, state)
+            return
         }
-
-        View firstComingUp = null;
-        View lastComingDown = null;
-        int left = 0;
-        int top = 0;
-        int right = parent.getWidth();
-        int bottom = 0;
-
-        int size = parent.getLayoutManager().getChildCount();
-        for (int i = 0; i < size; i++) {
-            View child = parent.getLayoutManager().getChildAt(i);
-            if (child.getTranslationY() < 0) {
-                lastComingDown = child;
-            } else if (child.getTranslationY() > 0 && firstComingUp == null) {
-                firstComingUp = child;
+        var firstComingUp: View? = null
+        var lastComingDown: View? = null
+        val left = 0
+        var top = 0
+        val right = parent.width
+        var bottom = 0
+        val size = parent.layoutManager!!.childCount
+        for (i in 0 until size) {
+            val child = parent.layoutManager!!.getChildAt(i)
+            if (child!!.translationY < 0) {
+                lastComingDown = child
+            } else if (child.translationY > 0 && firstComingUp == null) {
+                firstComingUp = child
             }
         }
-
         if (firstComingUp != null && lastComingDown != null) {
-            top = lastComingDown.getBottom() + (int) lastComingDown.getTranslationY();
-            bottom = firstComingUp.getTop() + (int) firstComingUp.getTranslationY();
+            top = lastComingDown.bottom + lastComingDown.translationY.toInt()
+            bottom = firstComingUp.top + firstComingUp.translationY.toInt()
         } else if (firstComingUp != null) {
-            top = firstComingUp.getTop();
-            bottom = firstComingUp.getTop() + (int) firstComingUp.getTranslationY();
+            top = firstComingUp.top
+            bottom = firstComingUp.top + firstComingUp.translationY.toInt()
         } else if (lastComingDown != null) {
-            top = lastComingDown.getBottom() + (int) lastComingDown.getTranslationY();
-            bottom = lastComingDown.getBottom();
+            top = lastComingDown.bottom + lastComingDown.translationY.toInt()
+            bottom = lastComingDown.bottom
         }
+        mBackground.setBounds(left, top, right, bottom)
+        mBackground.draw(c)
+        super.onDraw(c, parent, state)
+    }
 
-        mBackground.setBounds(left, top, right, bottom);
-        mBackground.draw(c);
-
-        super.onDraw(c, parent, state);
+    init {
+        mBackground = ColorDrawable(ContextCompat.getColor(context!!, R.color.colorDelete))
     }
 }

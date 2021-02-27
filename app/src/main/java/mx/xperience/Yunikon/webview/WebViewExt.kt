@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,184 +14,155 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.webview;
+package mx.xperience.Yunikon.webview
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.util.AttributeSet;
-import android.util.Log;
-import android.view.View;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.widget.ProgressBar;
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.util.AttributeSet
+import android.util.Log
+import android.view.View
+import android.webkit.WebView
+import android.widget.ProgressBar
+import androidx.collection.ArrayMap
+import mx.xperience.Yunikon.ui.UrlBarController
+import mx.xperience.Yunikon.utils.PrefsUtils
+import mx.xperience.Yunikon.utils.UrlUtils
+import java.util.regex.Pattern
 
-import mx.xperience.Yunikon.ui.UrlBarController;
-import mx.xperience.Yunikon.utils.PrefsUtils;
-import mx.xperience.Yunikon.utils.UrlUtils;
+class WebViewExt : WebView {
+    private val mRequestHeaders: MutableMap<String, String> = ArrayMap()
+    private var mActivity: WebViewExtActivity? = null
+    private var mMobileUserAgent: String? = null
+    private var mDesktopUserAgent: String? = null
+    var isIncognito = false
+        private set
+    private var mDesktopMode = false
+    var lastLoadedUrl: String? = null
+        private set
 
-import androidx.collection.ArrayMap;
+    constructor(context: Context?) : super(context!!) {}
+    constructor(context: Context?, attrs: AttributeSet?) : super(context!!, attrs) {}
+    constructor(context: Context?, attrs: AttributeSet?, defStyle: Int) : super(context!!, attrs, defStyle) {}
 
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-public class WebViewExt extends WebView {
-
-    private static final String TAG = "WebViewExt";
-
-    private static final String DESKTOP_DEVICE = "X11; Linux x86_64";
-    private static final String DESKTOP_USER_AGENT_FALLBACK =
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36";
-    private static final String HEADER_DNT = "DNT";
-    private final Map<String, String> mRequestHeaders = new ArrayMap<>();
-    private WebViewExtActivity mActivity;
-    private String mMobileUserAgent;
-    private String mDesktopUserAgent;
-    private boolean mIncognito;
-    private boolean mDesktopMode;
-    private String mLastLoadedUrl;
-
-    public WebViewExt(Context context) {
-        super(context);
+    override fun loadUrl(url: String) {
+        lastLoadedUrl = url
+        followUrl(url)
     }
 
-    public WebViewExt(Context context, AttributeSet attrs) {
-        super(context, attrs);
-    }
-
-    public WebViewExt(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-    }
-
-    @Override
-    public void loadUrl(String url) {
-        mLastLoadedUrl = url;
-        followUrl(url);
-    }
-
-    void followUrl(String url) {
-        String fixedUrl = UrlUtils.smartUrlFilter(url);
+    fun followUrl(url: String?) {
+        var fixedUrl = url?.let { UrlUtils.smartUrlFilter(it) }
         if (fixedUrl != null) {
-            super.loadUrl(fixedUrl, mRequestHeaders);
-            return;
+            super.loadUrl(fixedUrl, mRequestHeaders)
+            return
         }
-
-        String templateUri = PrefsUtils.getSearchEngine(mActivity);
-        fixedUrl = UrlUtils.getFormattedUri(templateUri, url);
+        val templateUri = mActivity?.let { PrefsUtils.getSearchEngine(it) }
+        fixedUrl = UrlUtils.getFormattedUri(templateUri, url)
         if (fixedUrl != null) {
-            super.loadUrl(fixedUrl, mRequestHeaders);
+            super.loadUrl(fixedUrl, mRequestHeaders)
         }
     }
 
-    public String getLastLoadedUrl() {
-        return mLastLoadedUrl;
-    }
-
-    private void setup() {
-        getSettings().setJavaScriptEnabled(PrefsUtils.getJavascript(mActivity));
-        getSettings().setJavaScriptCanOpenWindowsAutomatically(PrefsUtils.getJavascript(mActivity));
-        getSettings().setGeolocationEnabled(PrefsUtils.getLocation(mActivity));
-        getSettings().setSupportMultipleWindows(true);
-        getSettings().setBuiltInZoomControls(true);
-        getSettings().setDisplayZoomControls(false);
-        getSettings().setAppCacheEnabled(!mIncognito);
-        getSettings().setDatabaseEnabled(!mIncognito);
-        getSettings().setDomStorageEnabled(!mIncognito);
-        getSettings().setAppCachePath(mActivity.getDir("appcache", Context.MODE_PRIVATE).getPath());
-
-        setOnLongClickListener(new OnLongClickListener() {
-            boolean shouldAllowDownload;
-
-            @Override
-            public boolean onLongClick(View v) {
-                HitTestResult result = getHitTestResult();
-                switch (result.getType()) {
-                    case HitTestResult.IMAGE_TYPE:
-                    case HitTestResult.SRC_IMAGE_ANCHOR_TYPE:
-                        shouldAllowDownload = true;
-                    case HitTestResult.SRC_ANCHOR_TYPE:
-                        mActivity.showSheetMenu(result.getExtra(), shouldAllowDownload);
-                        shouldAllowDownload = false;
-                        return true;
+    private fun setup() {
+        settings.javaScriptEnabled = PrefsUtils.getJavascript(mActivity)
+        settings.javaScriptCanOpenWindowsAutomatically = PrefsUtils.getJavascript(mActivity)
+        settings.setGeolocationEnabled(PrefsUtils.getLocation(mActivity))
+        settings.setSupportMultipleWindows(true)
+        settings.builtInZoomControls = true
+        settings.displayZoomControls = false
+        settings.setAppCacheEnabled(!isIncognito)
+        settings.databaseEnabled = !isIncognito
+        settings.domStorageEnabled = !isIncognito
+        settings.setAppCachePath(mActivity!!.getDir("appcache", Context.MODE_PRIVATE).path)
+        setOnLongClickListener(object : OnLongClickListener {
+            var shouldAllowDownload = false
+            override fun onLongClick(v: View): Boolean {
+                val result = hitTestResult
+                when (result.type) {
+                    HitTestResult.IMAGE_TYPE, HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                        shouldAllowDownload = true
+                        mActivity!!.showSheetMenu(result.extra, shouldAllowDownload)
+                        shouldAllowDownload = false
+                        return true
+                    }
+                    HitTestResult.SRC_ANCHOR_TYPE -> {
+                        mActivity!!.showSheetMenu(result.extra, shouldAllowDownload)
+                        shouldAllowDownload = false
+                        return true
+                    }
                 }
-                return false;
+                return false
             }
-        });
-
-        setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) ->
-                mActivity.downloadFileAsk(url, contentDisposition, mimeType));
+        })
+        setDownloadListener { url: String?, userAgent: String?, contentDisposition: String?, mimeType: String?, contentLength: Long -> mActivity!!.downloadFileAsk(url, contentDisposition, mimeType) }
 
         // Mobile: Remove "wv" from the WebView's user agent. Some websites don't work
         // properly if the browser reports itself as a simple WebView.
         // Desktop: Generate the desktop user agent starting from the mobile one so that
         // we always report the current engine version.
-        Pattern pattern = Pattern.compile("([^)]+ \\()([^)]+)(\\) .*)");
-        Matcher matcher = pattern.matcher(getSettings().getUserAgentString());
+        val pattern = Pattern.compile("([^)]+ \\()([^)]+)(\\) .*)")
+        val matcher = pattern.matcher(settings.userAgentString)
         if (matcher.matches()) {
-            String mobileDevice = matcher.group(2).replace("; wv", "");
-            mMobileUserAgent = matcher.group(1) + mobileDevice + matcher.group(3);
+            val mobileDevice = matcher.group(2).replace("; wv", "")
+            mMobileUserAgent = matcher.group(1) + mobileDevice + matcher.group(3)
             mDesktopUserAgent = matcher.group(1) + DESKTOP_DEVICE + matcher.group(3)
-                    .replace(" Mobile ", " ");
-            getSettings().setUserAgentString(mMobileUserAgent);
+                    .replace(" Mobile ", " ")
+            settings.userAgentString = mMobileUserAgent
         } else {
-            Log.e(TAG, "Couldn't parse the user agent");
-            mMobileUserAgent = getSettings().getUserAgentString();
-            mDesktopUserAgent = DESKTOP_USER_AGENT_FALLBACK;
+            Log.e(TAG, "Couldn't parse the user agent")
+            mMobileUserAgent = settings.userAgentString
+            mDesktopUserAgent = DESKTOP_USER_AGENT_FALLBACK
         }
-
         if (PrefsUtils.getDoNotTrack(mActivity)) {
-            mRequestHeaders.put(HEADER_DNT, "1");
+            mRequestHeaders[HEADER_DNT] = "1"
         }
     }
 
-    public void init(WebViewExtActivity activity, UrlBarController urlBarController,
-                     ProgressBar progressBar, boolean incognito) {
-        mActivity = activity;
-        mIncognito = incognito;
-        ChromeClient chromeClient = new ChromeClient(activity, incognito,
-                urlBarController, progressBar);
-        setWebChromeClient(chromeClient);
-        setWebViewClient(new WebClient(urlBarController));
-        setup();
+    fun init(activity: WebViewExtActivity?, urlBarController: UrlBarController?,
+             progressBar: ProgressBar?, incognito: Boolean) {
+        mActivity = activity
+        isIncognito = incognito
+        val chromeClient = ChromeClient(activity!!, incognito,
+                urlBarController!!, progressBar!!)
+        webChromeClient = chromeClient
+        webViewClient = WebClient(urlBarController)
+        setup()
     }
 
-    public Bitmap getSnap() {
-        measure(MeasureSpec.makeMeasureSpec(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED),
-                MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-        layout(0, 0, getMeasuredWidth(), getMeasuredHeight());
-        setDrawingCacheEnabled(true);
-        buildDrawingCache();
-        int size = getMeasuredWidth() > getMeasuredHeight() ?
-                getMeasuredHeight() : getMeasuredWidth();
-        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-        Paint paint = new Paint();
-        int height = bitmap.getHeight();
-        canvas.drawBitmap(bitmap, 0, height, paint);
-        draw(canvas);
-        return bitmap;
-    }
+    val snap: Bitmap
+        get() {
+            measure(MeasureSpec.makeMeasureSpec(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED),
+                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+            layout(0, 0, measuredWidth, measuredHeight)
+            isDrawingCacheEnabled = true
+            buildDrawingCache()
+            val size = if (measuredWidth > measuredHeight) measuredHeight else measuredWidth
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val paint = Paint()
+            val height = bitmap.height
+            canvas.drawBitmap(bitmap, 0f, height.toFloat(), paint)
+            draw(canvas)
+            return bitmap
+        }
+    var isDesktopMode: Boolean
+        get() = mDesktopMode
+        set(desktopMode) {
+            mDesktopMode = desktopMode
+            val settings = settings
+            settings.userAgentString = if (desktopMode) mDesktopUserAgent else mMobileUserAgent
+            settings.useWideViewPort = desktopMode
+            settings.loadWithOverviewMode = desktopMode
+            reload()
+        }
+    val requestHeaders: Map<String, String>
+        get() = mRequestHeaders
 
-    public boolean isIncognito() {
-        return mIncognito;
-    }
-
-    public boolean isDesktopMode() {
-        return mDesktopMode;
-    }
-
-    public void setDesktopMode(boolean desktopMode) {
-        mDesktopMode = desktopMode;
-        WebSettings settings = getSettings();
-        settings.setUserAgentString(desktopMode ? mDesktopUserAgent : mMobileUserAgent);
-        settings.setUseWideViewPort(desktopMode);
-        settings.setLoadWithOverviewMode(desktopMode);
-        reload();
-    }
-
-    Map<String, String> getRequestHeaders() {
-        return mRequestHeaders;
+    companion object {
+        private const val TAG = "WebViewExt"
+        private const val DESKTOP_DEVICE = "X11; Linux x86_64"
+        private const val DESKTOP_USER_AGENT_FALLBACK = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36"
+        private const val HEADER_DNT = "DNT"
     }
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,125 +14,108 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon;
+package mx.xperience.Yunikon
 
-import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
-import android.preference.Preference;
-import android.preference.PreferenceCategory;
-import android.preference.PreferenceFragment;
-import android.preference.SwitchPreference;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.webkit.CookieManager;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.Toast;
+import android.content.DialogInterface
+import android.content.Intent
+import android.os.Bundle
+import android.preference.Preference
+import android.preference.Preference.OnPreferenceChangeListener
+import android.preference.Preference.OnPreferenceClickListener
+import android.preference.PreferenceCategory
+import android.preference.PreferenceFragment
+import android.preference.SwitchPreference
+import android.view.View
+import android.webkit.CookieManager
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import mx.xperience.Yunikon.utils.IntentUtils
+import mx.xperience.Yunikon.utils.NetworkSecurityPolicyUtils.isSupported
+import mx.xperience.Yunikon.utils.NetworkSecurityPolicyUtils.setCleartextTrafficPermitted
+import mx.xperience.Yunikon.utils.PrefsUtils
+import mx.xperience.Yunikon.utils.UiUtils
 
-import mx.xperience.Yunikon.utils.IntentUtils;
-import mx.xperience.Yunikon.utils.NetworkSecurityPolicyUtils;
-import mx.xperience.Yunikon.utils.PrefsUtils;
-import mx.xperience.Yunikon.utils.UiUtils;
-
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
-public class SettingsActivity extends AppCompatActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        setContentView(R.layout.activity_settings);
-
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        toolbar.setNavigationIcon(R.drawable.ic_back);
-        toolbar.setNavigationOnClickListener(v -> finish());
+class SettingsActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_settings)
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        toolbar.setNavigationIcon(R.drawable.ic_back)
+        toolbar.setNavigationOnClickListener { v: View? -> finish() }
     }
 
-    public static class MyPreferenceFragment extends PreferenceFragment {
-
-        @Override
-        public void onCreate(Bundle savedInstance) {
-            super.onCreate(savedInstance);
-            addPreferencesFromResource(R.xml.settings);
-
-            PreferenceCategory securityCategory = (PreferenceCategory)
-                    findPreference("category_security");
-
-            Preference homePage = findPreference("key_home_page");
-            homePage.setSummary(PrefsUtils.getHomePage(getContext()));
-            homePage.setOnPreferenceClickListener(preference -> {
-                editHomePage(preference);
-                return true;
-            });
-
-            Preference clearCookie = findPreference("key_cookie_clear");
-            clearCookie.setOnPreferenceClickListener(preference -> {
-                CookieManager.getInstance().removeAllCookies(null);
-                Toast.makeText(getContext(), getString(R.string.pref_cookie_clear_done),
-                        Toast.LENGTH_LONG).show();
-                return true;
-            });
-
-            SwitchPreference reachMode = (SwitchPreference) findPreference(("key_reach_mode"));
-            if (UiUtils.isTablet(getContext())) {
-                getPreferenceScreen().removePreference(reachMode);
-            } else {
-                reachMode.setOnPreferenceClickListener(preference -> {
-                    Intent intent = new Intent(IntentUtils.EVENT_CHANGE_UI_MODE);
-                    intent.putExtra(IntentUtils.EVENT_CHANGE_UI_MODE, reachMode.isChecked());
-                    LocalBroadcastManager.getInstance(getContext()).sendBroadcast(intent);
-                    return true;
-                });
+    class MyPreferenceFragment : PreferenceFragment() {
+        override fun onCreate(savedInstance: Bundle?) {
+            super.onCreate(savedInstance)
+            addPreferencesFromResource(R.xml.settings)
+            val securityCategory = findPreference("category_security") as PreferenceCategory
+            val homePage = findPreference("key_home_page")
+            homePage.summary = PrefsUtils.getHomePage(context)
+            homePage.onPreferenceClickListener = OnPreferenceClickListener { preference: Preference ->
+                editHomePage(preference)
+                true
             }
-
-            SwitchPreference clearTextTraffic = (SwitchPreference)
-                    findPreference("key_clear_text_traffic");
-            if (NetworkSecurityPolicyUtils.isSupported()) {
-                clearTextTraffic.setOnPreferenceChangeListener((preference, value) -> {
-                    NetworkSecurityPolicyUtils.setCleartextTrafficPermitted((Boolean) value);
-                    return true;
-                });
+            val clearCookie = findPreference("key_cookie_clear")
+            clearCookie.onPreferenceClickListener = OnPreferenceClickListener { preference: Preference? ->
+                CookieManager.getInstance().removeAllCookies(null)
+                Toast.makeText(context, getString(R.string.pref_cookie_clear_done),
+                        Toast.LENGTH_LONG).show()
+                true
+            }
+            val reachMode = findPreference("key_reach_mode") as SwitchPreference
+            if (UiUtils.isTablet(context)) {
+                preferenceScreen.removePreference(reachMode)
             } else {
-                securityCategory.removePreference(clearTextTraffic);
+                reachMode.onPreferenceClickListener = OnPreferenceClickListener { preference: Preference? ->
+                    val intent = Intent(IntentUtils.EVENT_CHANGE_UI_MODE)
+                    intent.putExtra(IntentUtils.EVENT_CHANGE_UI_MODE, reachMode.isChecked)
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+                    true
+                }
+            }
+            val clearTextTraffic = findPreference("key_clear_text_traffic") as SwitchPreference
+            if (isSupported) {
+                clearTextTraffic.onPreferenceChangeListener = OnPreferenceChangeListener { preference: Preference?, value: Any? ->
+                    setCleartextTrafficPermitted((value as Boolean?)!!)
+                    true
+                }
+            } else {
+                securityCategory.removePreference(clearTextTraffic)
             }
         }
 
-        private void editHomePage(Preference preference) {
-            Context context = getContext();
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            AlertDialog alertDialog = builder.create();
-            LayoutInflater inflater = alertDialog.getLayoutInflater();
-
-            View homepageView = inflater.inflate(R.layout.dialog_homepage_edit,
-                    new LinearLayout(context));
-            EditText editText = homepageView.findViewById(R.id.homepage_edit_url);
-            editText.setText(PrefsUtils.getHomePage(context));
-
+        private fun editHomePage(preference: Preference) {
+            val context = context
+            val builder = AlertDialog.Builder(context)
+            val alertDialog = builder.create()
+            val inflater = alertDialog.layoutInflater
+            val homepageView = inflater.inflate(R.layout.dialog_homepage_edit,
+                    LinearLayout(context))
+            val editText = homepageView.findViewById<EditText>(R.id.homepage_edit_url)
+            editText.setText(PrefsUtils.getHomePage(context))
             builder.setTitle(R.string.pref_start_page_dialog_title)
                     .setMessage(R.string.pref_start_page_dialog_message)
                     .setView(homepageView)
-                    .setPositiveButton(android.R.string.ok,
-                            (dialog, which) -> {
-                                String url = editText.getText().toString().isEmpty() ?
-                                        getString(R.string.default_home_page) :
-                                        editText.getText().toString();
-                                PrefsUtils.setHomePage(context, url);
-                                preference.setSummary(url);
-                            })
-                    .setNeutralButton(R.string.pref_start_page_dialog_reset,
-                            (dialog, which) -> {
-                                String url = getString(R.string.default_home_page);
-                                PrefsUtils.setHomePage(context, url);
-                                preference.setSummary(url);
-                            })
+                    .setPositiveButton(android.R.string.ok
+                    ) { dialog: DialogInterface?, which: Int ->
+                        val url = if (editText.text.toString().isEmpty()) getString(R.string.default_home_page) else editText.text.toString()
+                        PrefsUtils.setHomePage(context, url)
+                        preference.summary = url
+                    }
+                    .setNeutralButton(R.string.pref_start_page_dialog_reset
+                    ) { dialog: DialogInterface?, which: Int ->
+                        val url = getString(R.string.default_home_page)
+                        PrefsUtils.setHomePage(context, url)
+                        preference.summary = url
+                    }
                     .setNegativeButton(android.R.string.cancel, null)
-                    .show();
+                    .show()
         }
     }
 }

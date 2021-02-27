@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,204 +14,168 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.webview;
+package mx.xperience.Yunikon.webview
 
-import android.app.PendingIntent;
-import android.content.ActivityNotFoundException;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
-import android.graphics.Bitmap;
-import android.net.Uri;
-import android.text.TextUtils;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.webkit.HttpAuthHandler;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.app.PendingIntent
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
+import android.graphics.Bitmap
+import android.net.Uri
+import android.text.TextUtils
+import android.view.LayoutInflater
+import android.webkit.HttpAuthHandler
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import com.google.android.material.snackbar.Snackbar
+import mx.xperience.Yunikon.R
+import mx.xperience.Yunikon.ui.UrlBarController
+import mx.xperience.Yunikon.utils.IntentUtils
+import mx.xperience.Yunikon.utils.UrlUtils
+import java.net.URISyntaxException
+import java.util.*
 
-import mx.xperience.Yunikon.IntentFilterCompat;
-import mx.xperience.Yunikon.R;
-import mx.xperience.Yunikon.ui.UrlBarController;
-import mx.xperience.Yunikon.utils.IntentUtils;
-import mx.xperience.Yunikon.utils.UrlUtils;
-
-import androidx.appcompat.app.AlertDialog;
-
-import com.google.android.material.snackbar.Snackbar;
-
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-
-class WebClient extends WebViewClient {
-    private UrlBarController mUrlBarController;
-
-    WebClient(UrlBarController urlBarController) {
-        super();
-        mUrlBarController = urlBarController;
+internal class WebClient(private val mUrlBarController: UrlBarController) : WebViewClient() {
+    override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+        super.onPageStarted(view, url, favicon)
+        mUrlBarController.onPageLoadStarted(url)
     }
 
-    @Override
-    public void onPageStarted(WebView view, String url, Bitmap favicon) {
-        super.onPageStarted(view, url, favicon);
-        mUrlBarController.onPageLoadStarted(url);
+    override fun onPageFinished(view: WebView, url: String) {
+        super.onPageFinished(view, url)
+        mUrlBarController.onPageLoadFinished(view.context, view.certificate)
     }
 
-    @Override
-    public void onPageFinished(WebView view, String url) {
-        super.onPageFinished(view, url);
-        mUrlBarController.onPageLoadFinished(view.getContext(), view.getCertificate());
-    }
-
-    @Override
-    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-        if (request.isForMainFrame()) {
-            WebViewExt webViewExt = (WebViewExt) view;
-            String url = request.getUrl().toString();
-            boolean needsLookup = request.hasGesture()
-                    || !TextUtils.equals(url, webViewExt.getLastLoadedUrl());
-
-            if (!webViewExt.isIncognito()
+    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+        if (request.isForMainFrame) {
+            val webViewExt = view as WebViewExt
+            val url = request.url.toString()
+            val needsLookup = (request.hasGesture()
+                    || !TextUtils.equals(url, webViewExt.lastLoadedUrl))
+            if (!webViewExt.isIncognito
                     && needsLookup
-                    && !request.isRedirect()
+                    && !request.isRedirect
                     && startActivityForUrl(view, url)) {
-                return true;
-            } else if (!webViewExt.getRequestHeaders().isEmpty()) {
-                webViewExt.followUrl(url);
-                return true;
+                return true
+            } else if (webViewExt.requestHeaders.isNotEmpty()) {
+                webViewExt.followUrl(url)
+                return true
             }
         }
-
-        return false;
+        return false
     }
 
-    @Override
-    public void onReceivedHttpAuthRequest(WebView view,
-                                          HttpAuthHandler handler, String host, String realm) {
-        Context context = view.getContext();
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        LayoutInflater layoutInflater = LayoutInflater.from(context);
-        View dialogView = layoutInflater.inflate(R.layout.auth_dialog, new LinearLayout(context));
-        EditText username = dialogView.findViewById(R.id.username);
-        EditText password = dialogView.findViewById(R.id.password);
-        TextView auth_detail = dialogView.findViewById(R.id.auth_detail);
-        String text = context.getString(R.string.auth_dialog_detail, view.getUrl());
-        auth_detail.setText(text);
+    override fun onReceivedHttpAuthRequest(view: WebView,
+                                           handler: HttpAuthHandler, host: String, realm: String) {
+        val context = view.context
+        val builder = AlertDialog.Builder(context)
+        val layoutInflater = LayoutInflater.from(context)
+        val dialogView = layoutInflater.inflate(R.layout.auth_dialog, LinearLayout(context))
+        val username = dialogView.findViewById<EditText>(R.id.username)
+        val password = dialogView.findViewById<EditText>(R.id.password)
+        val authDetail = dialogView.findViewById<TextView>(R.id.auth_detail)
+        val text = context.getString(R.string.auth_dialog_detail, view.url)
+        authDetail.text = text
         builder.setView(dialogView)
                 .setTitle(R.string.auth_dialog_title)
-                .setPositiveButton(R.string.auth_dialog_login,
-                        (dialog, whichButton) -> handler.proceed(
-                                username.getText().toString(), password.getText().toString()))
-                .setNegativeButton(android.R.string.cancel,
-                        (dialog, whichButton) -> handler.cancel())
-                .setOnDismissListener(dialog -> handler.cancel())
-                .show();
+                .setPositiveButton(R.string.auth_dialog_login)
+                { _: DialogInterface?, _: Int ->
+                    handler.proceed(
+                            username.text.toString(), password.text.toString())
+                }
+                .setNegativeButton(android.R.string.cancel)
+                { _: DialogInterface?, _: Int ->
+                    handler.cancel()
+                }
+                .setOnDismissListener { handler.cancel() }
+                .show()
     }
 
-    private boolean startActivityForUrl(WebView view, String url) {
-        Intent intent;
-        Context context = view.getContext();
-        try {
-            intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
-        } catch (URISyntaxException ex) {
-            return false;
+    private fun startActivityForUrl(view: WebView, url: String): Boolean {
+        var intent: Intent
+        val context = view.context
+        intent = try {
+            Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+        } catch (ex: URISyntaxException) {
+            return false
         }
-
-        intent.addCategory(Intent.CATEGORY_BROWSABLE);
-        intent.setComponent(null);
-        intent.setSelector(null);
-
-        Matcher m = UrlUtils.ACCEPTED_URI_SCHEMA.matcher(url);
+        intent.addCategory(Intent.CATEGORY_BROWSABLE)
+        intent.component = null
+        intent.selector = null
+        val m = UrlUtils.ACCEPTED_URI_SCHEMA.matcher(url)
         if (m.matches()) {
-            Intent chooserIntent = makeHandlerChooserIntent(context, intent, url);
-            if (chooserIntent != null) {
-                intent = chooserIntent;
-            } else {
-                // There only are browsers for this URL, handle it ourselves
-                return false;
-            }
+            // If there only are browsers for this URL, handle it ourselves
+            intent = makeHandlerChooserIntent(context, intent, url) ?: return false
         } else {
-            String packageName = intent.getPackage();
+            val packageName = intent.getPackage()
             if (packageName != null
-                    && context.getPackageManager().resolveActivity(intent, 0) == null) {
+                    && context.packageManager.resolveActivity(intent, 0) == null) {
                 // Explicit intent, but app is not installed - try to redirect to Play Store
-                Uri storeUri = Uri.parse("market://search?q=pname:" + packageName);
-                intent = new Intent(Intent.ACTION_VIEW, storeUri)
-                        .addCategory(Intent.CATEGORY_BROWSABLE);
+                val storeUri = Uri.parse("market://search?q=pname:$packageName")
+                intent = Intent(Intent.ACTION_VIEW, storeUri)
+                        .addCategory(Intent.CATEGORY_BROWSABLE)
             }
         }
-
         try {
-            context.startActivity(intent);
-            return true;
-        } catch (ActivityNotFoundException e) {
+            context.startActivity(intent)
+            return true
+        } catch (e: ActivityNotFoundException) {
             Snackbar.make(view, context.getString(R.string.error_no_activity_found),
-                    Snackbar.LENGTH_LONG).show();
+                    Snackbar.LENGTH_LONG).show()
         }
-        return false;
+        return false
     }
 
-    private Intent makeHandlerChooserIntent(Context context, Intent intent, String url) {
-        final PackageManager pm = context.getPackageManager();
-        final List<ResolveInfo> activities = pm.queryIntentActivities(intent,
-                PackageManager.MATCH_DEFAULT_ONLY | PackageManager.GET_RESOLVED_FILTER);
-        if (activities == null || activities.isEmpty()) {
-            return null;
+    private fun makeHandlerChooserIntent(context: Context, intent: Intent, url: String): Intent? {
+        val pm = context.packageManager
+        val activities = pm.queryIntentActivities(intent,
+                PackageManager.MATCH_DEFAULT_ONLY or PackageManager.GET_RESOLVED_FILTER)
+        if (activities.isEmpty()) {
+            return null
         }
-
-        final ArrayList<Intent> chooserIntents = new ArrayList<>();
-        final String ourPackageName = context.getPackageName();
-
-        activities.sort(new ResolveInfo.DisplayNameComparator(pm));
-
-        for (ResolveInfo resolveInfo : activities) {
-            IntentFilter filter = resolveInfo.filter;
-            ActivityInfo info = resolveInfo.activityInfo;
+        val chooserIntents = ArrayList<Intent>()
+        val ourPackageName = context.packageName
+        activities.sortWith(ResolveInfo.DisplayNameComparator(pm))
+        for (resolveInfo in activities) {
+            val filter = resolveInfo.filter ?: continue
+            val info = resolveInfo.activityInfo
             if (!info.enabled || !info.exported) {
-                continue;
+                continue
             }
-            if (filter == null) {
-                continue;
-            }
-            if (IntentFilterCompat.filterIsBrowser(filter)
+            if (filter.countDataAuthorities() == 0
                     && !TextUtils.equals(info.packageName, ourPackageName)) {
-                continue;
+                continue
             }
-
-            Intent targetIntent = new Intent(intent);
-            targetIntent.setPackage(info.packageName);
-            chooserIntents.add(targetIntent);
+            val targetIntent = Intent(intent)
+            targetIntent.setPackage(info.packageName)
+            chooserIntents.add(targetIntent)
         }
-
         if (chooserIntents.isEmpty()) {
-            return null;
+            return null
         }
-
-        final Intent lastIntent = chooserIntents.remove(chooserIntents.size() - 1);
+        val lastIntent = chooserIntents.removeAt(chooserIntents.size - 1)
         if (chooserIntents.isEmpty()) {
             // there was only one, no need to show the chooser
-            return TextUtils.equals(lastIntent.getPackage(), ourPackageName) ? null : lastIntent;
+            return if (ourPackageName.equals(lastIntent.getPackage())) null else lastIntent
         }
-
-        Intent changeIntent = new Intent(IntentUtils.EVENT_URL_RESOLVED)
+        val changeIntent = Intent(IntentUtils.EVENT_URL_RESOLVED)
                 .addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY)
-                .putExtra(IntentUtils.EXTRA_URL, url);
-        PendingIntent pi = PendingIntent.getBroadcast(context, 0, changeIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_ONE_SHOT);
-
-        Intent chooserIntent = Intent.createChooser(lastIntent, null);
+                .putExtra(IntentUtils.EXTRA_URL, url)
+        val pi = PendingIntent.getBroadcast(context, 0, changeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_ONE_SHOT)
+        val chooserIntent = Intent.createChooser(lastIntent, null)
         chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS,
-                chooserIntents.toArray(new Intent[chooserIntents.size()]));
-        chooserIntent.putExtra(Intent.EXTRA_CHOOSER_REFINEMENT_INTENT_SENDER, pi.getIntentSender());
-        return chooserIntent;
+                chooserIntents.toTypedArray())
+        chooserIntent.putExtra(Intent.EXTRA_CHOOSER_REFINEMENT_INTENT_SENDER, pi.intentSender)
+        return chooserIntent
     }
+
 }

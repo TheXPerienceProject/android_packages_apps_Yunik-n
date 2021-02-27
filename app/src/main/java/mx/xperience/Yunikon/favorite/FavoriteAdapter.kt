@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,75 +14,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.favorite;
+package mx.xperience.Yunikon.favorite
 
-import android.content.Context;
-import android.database.Cursor;
-import android.view.LayoutInflater;
-import android.view.ViewGroup;
+import android.content.*
+import android.database.Cursor
+import android.provider.BaseColumns
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
+import mx.xperience.Yunikon.R
 
-import mx.xperience.Yunikon.R;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
-class FavoriteAdapter extends RecyclerView.Adapter<FavoriteHolder> {
-    private final Context mContext;
-    private Cursor mCursor;
-
-    private int mIdColumnIndex;
-    private int mTitleColumnIndex;
-    private int mUrlColumnIndex;
-    private int mColorColumnIndex;
-
-    FavoriteAdapter(Context context) {
-        mContext = context;
-        setHasStableIds(true);
-    }
-
-    void swapCursor(Cursor cursor) {
-        if (cursor == mCursor) {
-            return;
+internal class FavoriteAdapter(private val mContext: Context) : RecyclerView.Adapter<FavoriteHolder>() {
+    private var mCursor: Cursor? = null
+    private var mIdColumnIndex = 0
+    private var mTitleColumnIndex = 0
+    private var mUrlColumnIndex = 0
+    private var mColorColumnIndex = 0
+    fun swapCursor(cursor: Cursor?) {
+        if (cursor === mCursor) {
+            return
         }
         if (mCursor != null) {
-            mCursor.close();
+            mCursor!!.close()
         }
-        mCursor = cursor;
+        mCursor = cursor
         if (mCursor != null) {
-            mIdColumnIndex = cursor.getColumnIndexOrThrow(FavoriteProvider.Columns._ID);
-            mTitleColumnIndex = cursor.getColumnIndexOrThrow(FavoriteProvider.Columns.TITLE);
-            mUrlColumnIndex = cursor.getColumnIndexOrThrow(FavoriteProvider.Columns.URL);
-            mColorColumnIndex = cursor.getColumnIndexOrThrow(FavoriteProvider.Columns.COLOR);
+            mIdColumnIndex = cursor!!.getColumnIndexOrThrow(BaseColumns._ID)
+            mTitleColumnIndex = cursor.getColumnIndexOrThrow(FavoriteProvider.Columns.Companion.TITLE)
+            mUrlColumnIndex = cursor.getColumnIndexOrThrow(FavoriteProvider.Columns.Companion.URL)
+            mColorColumnIndex = cursor.getColumnIndexOrThrow(FavoriteProvider.Columns.Companion.COLOR)
         }
-        notifyDataSetChanged();
+        notifyDataSetChanged()
     }
 
-    @NonNull
-    @Override
-    public FavoriteHolder onCreateViewHolder(ViewGroup parent, int type) {
-        return new FavoriteHolder(LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_favorite, parent, false));
+    override fun onCreateViewHolder(parent: ViewGroup, type: Int): FavoriteHolder {
+        return FavoriteHolder(LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_favorite, parent, false))
     }
 
-    @Override
-    public void onBindViewHolder(@NonNull FavoriteHolder holder, int position) {
-        if (!mCursor.moveToPosition(position)) {
-            return;
+    override fun onBindViewHolder(holder: FavoriteHolder, position: Int) {
+        if (!mCursor!!.moveToPosition(position)) {
+            return
         }
-        long id = mCursor.getLong(mIdColumnIndex);
-        String title = mCursor.getString(mTitleColumnIndex);
-        String url = mCursor.getString(mUrlColumnIndex);
-        int color = mCursor.getInt(mColorColumnIndex);
-        holder.bind(mContext, id, title, url, color);
+        val id = mCursor!!.getLong(mIdColumnIndex)
+        val title = mCursor!!.getString(mTitleColumnIndex)
+        val url = mCursor!!.getString(mUrlColumnIndex)
+        val color = mCursor!!.getInt(mColorColumnIndex)
+        holder.bind(mContext, id, title, url, color)
     }
 
-    @Override
-    public int getItemCount() {
-        return mCursor != null ? mCursor.getCount() : 0;
+    override fun getItemCount(): Int {
+        return if (mCursor != null) mCursor!!.count else 0
     }
 
-    @Override
-    public long getItemId(int position) {
-        return mCursor.moveToPosition(position) ? mCursor.getLong(mIdColumnIndex) : -1;
+    override fun getItemId(position: Int): Long {
+        return if (mCursor!!.moveToPosition(position)) mCursor!!.getLong(mIdColumnIndex) else -1
+    }
+
+    init {
+        setHasStableIds(true)
     }
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.utils;
+package mx.xperience.Yunikon.utils
 
-public final class NetworkSecurityPolicyUtils {
+object NetworkSecurityPolicyUtils {
+    val isSupported: Boolean
+        get() = false
 
-    private NetworkSecurityPolicyUtils() {
-    }
-
-    @SuppressWarnings("SameReturnValue")
-    public static boolean isSupported() {
-        return false;
-    }
-
-    @SuppressWarnings("UnusedParameters")
-    public static void setCleartextTrafficPermitted(boolean permitted) {
-    }
+    @JvmStatic
+    fun setCleartextTrafficPermitted(permitted: Boolean) {}
 }

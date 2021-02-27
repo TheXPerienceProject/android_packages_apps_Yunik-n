@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
  * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,66 +15,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.utils;
+package mx.xperience.Yunikon.utils
 
-import android.util.Patterns;
-import android.webkit.URLUtil;
+import android.util.Patterns
+import android.webkit.URLUtil
+import java.util.*
+import java.util.regex.Pattern
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-public final class UrlUtils {
-    public static final Pattern ACCEPTED_URI_SCHEMA = Pattern.compile(
-            "(?i)" + // switch on case insensitive matching
-                    "(" +    // begin group for schema
+object UrlUtils {
+    val ACCEPTED_URI_SCHEMA: Pattern = Pattern.compile(
+            "(?i)" +  // switch on case insensitive matching
+                    "(" +  // begin group for schema
                     "(?:http|https|file|chrome)://" +
                     "|(?:inline|data|about|javascript):" +
                     ")" +
                     "(.*)"
-    );
-
-    private UrlUtils() {
-    }
+    )
 
     /**
      * Attempts to determine whether user input is a URL or search
      * terms.  Anything with a space is passed to search if canBeSearch is true.
-     * <p>
+     *
+     *
      * Converts to lowercase any mistakenly uppercased schema (i.e.,
      * "Http://" converts to "http://"
      *
      * @return Original or modified URL
      */
-    public static String smartUrlFilter(String url) {
-        String inUrl = url.trim();
-        boolean hasSpace = inUrl.indexOf(' ') != -1;
-
-        Matcher matcher = ACCEPTED_URI_SCHEMA.matcher(inUrl);
+    fun smartUrlFilter(url: String): String? {
+        var inUrl = url.trim { it <= ' ' }
+        val hasSpace = inUrl.indexOf(' ') != -1
+        val matcher = ACCEPTED_URI_SCHEMA.matcher(inUrl)
         if (matcher.matches()) {
             // force scheme to lowercase
-            String scheme = matcher.group(1);
-            String lcScheme = scheme.toLowerCase();
-            if (!lcScheme.equals(scheme)) {
-                inUrl = lcScheme + matcher.group(2);
+            val scheme = matcher.group(1)
+            val lcScheme = scheme.toLowerCase(Locale.getDefault())
+            if (lcScheme != scheme) {
+                inUrl = lcScheme + matcher.group(2)
             }
             if (hasSpace && Patterns.WEB_URL.matcher(inUrl).matches()) {
-                inUrl = inUrl.replace(" ", "%20");
+                inUrl = inUrl.replace(" ", "%20")
             }
-            return inUrl;
+            return inUrl
         }
-        if (!hasSpace && Patterns.WEB_URL.matcher(inUrl).matches()) {
-            return URLUtil.guessUrl(inUrl);
-        }
-        return null;
+        return if (!hasSpace && Patterns.WEB_URL.matcher(inUrl).matches()) {
+            URLUtil.guessUrl(inUrl)
+        } else null
     }
 
     /**
      * Formats a launch-able uri out of the template uri by replacing the template parameters with
      * actual values.
      */
-    public static String getFormattedUri(String templateUri, String query) {
-        return URLUtil.composeSearchUrl(query, templateUri, "{searchTerms}");
+    fun getFormattedUri(templateUri: String?, query: String?): String {
+        return URLUtil.composeSearchUrl(query, templateUri, "{searchTerms}")
     }
-
-
 }

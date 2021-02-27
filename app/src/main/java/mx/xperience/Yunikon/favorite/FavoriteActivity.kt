@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,187 +14,148 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.favorite;
+package mx.xperience.Yunikon.favorite
 
-import android.app.LoaderManager;
-import android.content.ContentResolver;
-import android.content.ContentUris;
-import android.content.CursorLoader;
-import android.content.Loader;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.content.ContentResolver
+import android.content.ContentUris
+import android.content.DialogInterface
+import android.database.Cursor
+import android.os.AsyncTask
+import android.os.Bundle
+import android.provider.BaseColumns
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.loader.app.LoaderManager
+import androidx.loader.app.LoaderManager.LoaderCallbacks
+import androidx.loader.content.CursorLoader
+import androidx.loader.content.Loader
+import androidx.recyclerview.widget.DefaultItemAnimator
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import mx.xperience.Yunikon.R
+import mx.xperience.Yunikon.utils.UiUtils
 
-import mx.xperience.Yunikon.R;
-import mx.xperience.Yunikon.utils.UiUtils;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
-public class FavoriteActivity extends AppCompatActivity {
-    private RecyclerView mList;
-    private View mEmptyView;
-
-    private FavoriteAdapter mAdapter;
-
-    @Override
-    protected void onCreate(Bundle savedInstance) {
-        super.onCreate(savedInstance);
-
-        setContentView(R.layout.activity_favorites);
-
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        toolbar.setNavigationIcon(R.drawable.ic_back);
-        toolbar.setNavigationOnClickListener(v -> finish());
-
-        mList = findViewById(R.id.favorite_list);
-        mEmptyView = findViewById(R.id.favorite_empty_layout);
-
-        mAdapter = new FavoriteAdapter(this);
-
-        getLoaderManager().initLoader(0, null, new LoaderManager.LoaderCallbacks<Cursor>() {
-            @Override
-            public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-                return new CursorLoader(FavoriteActivity.this, FavoriteProvider.Columns.CONTENT_URI,
-                        null, null, null, FavoriteProvider.Columns._ID + " DESC");
+class FavoriteActivity : AppCompatActivity() {
+    private lateinit var mList: RecyclerView
+    private lateinit var mEmptyView: View
+    private lateinit var mAdapter: FavoriteAdapter
+    override fun onCreate(savedInstance: Bundle?) {
+        super.onCreate(savedInstance)
+        setContentView(R.layout.activity_favorites)
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        toolbar.setNavigationIcon(R.drawable.ic_back)
+        toolbar.setNavigationOnClickListener { finish() }
+        mList = findViewById(R.id.favorite_list)
+        mEmptyView = findViewById(R.id.favorite_empty_layout)
+        mAdapter = FavoriteAdapter(this)
+        val loader = LoaderManager.getInstance(this)
+        loader.initLoader(0, null, object : LoaderCallbacks<Cursor> {
+            override fun onCreateLoader(id: Int, args: Bundle?): Loader<Cursor> {
+                return CursorLoader(this@FavoriteActivity, FavoriteProvider.Columns.CONTENT_URI,
+                        null, null, null, BaseColumns._ID + " DESC")
             }
 
-            @Override
-            public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
-                mAdapter.swapCursor(cursor);
-
-                if (cursor.getCount() == 0) {
-                    mList.setVisibility(View.GONE);
-                    mEmptyView.setVisibility(View.VISIBLE);
+            override fun onLoadFinished(loader: Loader<Cursor>, data: Cursor?) {
+                mAdapter.swapCursor(data)
+                if (data != null && data.count == 0) {
+                    mList.visibility = View.GONE
+                    mEmptyView.visibility = View.VISIBLE
                 }
             }
 
-            @Override
-            public void onLoaderReset(Loader<Cursor> loader) {
-                mAdapter.swapCursor(null);
+            override fun onLoaderReset(loader: Loader<Cursor>) {
+                mAdapter.swapCursor(null)
             }
-        });
-
-        mList.setLayoutManager(new GridLayoutManager(this, 2));
-        mList.setItemAnimator(new DefaultItemAnimator());
-        mList.setAdapter(mAdapter);
-
-        int listTop = mList.getTop();
-        mList.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-
-                toolbar.setElevation(recyclerView.getChildAt(0).getTop() < listTop ?
-                        UiUtils.dpToPx(getResources(),
-                                getResources().getDimension(R.dimen.toolbar_elevation)) : 0);
-
+        })
+        mList.layoutManager = GridLayoutManager(this, 2)
+        mList.itemAnimator = DefaultItemAnimator()
+        mList.adapter = mAdapter
+        val listTop = mList.top
+        mList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                toolbar.elevation = if (recyclerView.getChildAt(0).top < listTop) {
+                    UiUtils.dpToPx(resources, resources.getDimension(R.dimen.toolbar_elevation))
+                } else {
+                    0f
+                }
             }
-        });
+        })
     }
 
-    void editItem(long id, String title, String url) {
-        View view = LayoutInflater.from(this)
-                .inflate(R.layout.dialog_favorite_edit, new LinearLayout(this));
-        EditText titleEdit = view.findViewById(R.id.favorite_edit_title);
-        EditText urlEdit = view.findViewById(R.id.favorite_edit_url);
-
-        titleEdit.setText(title);
-        urlEdit.setText(url);
-
-        String error = getString(R.string.favorite_edit_error);
-        urlEdit.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
+    fun editItem(id: Long, title: String?, url: String) {
+        val view = LayoutInflater.from(this)
+                .inflate(R.layout.dialog_favorite_edit, LinearLayout(this))
+        val titleEdit = view.findViewById<EditText>(R.id.favorite_edit_title)
+        val urlEdit = view.findViewById<EditText>(R.id.favorite_edit_url)
+        titleEdit.setText(title)
+        urlEdit.setText(url)
+        val error = getString(R.string.favorite_edit_error)
+        urlEdit.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
                 if (!s.toString().contains("http")) {
-                    urlEdit.setError(error);
+                    urlEdit.error = error
                 }
             }
 
-            @Override
-            public void afterTextChanged(Editable s) {
+            override fun afterTextChanged(s: Editable) {
                 if (!s.toString().contains("http")) {
-                    urlEdit.setError(error);
+                    urlEdit.error = error
                 }
             }
-        });
-
-        new AlertDialog.Builder(this)
+        })
+        AlertDialog.Builder(this)
                 .setTitle(R.string.favorite_edit_dialog_title)
                 .setView(view)
-                .setPositiveButton(R.string.favorite_edit_positive,
-                        ((dialog, which) -> {
-                            String updatedUrl = urlEdit.getText().toString();
-                            String updatedTitle = titleEdit.getText().toString();
-                            if (url.isEmpty()) {
-                                urlEdit.setError(error);
-                                urlEdit.requestFocus();
-                            }
-                            new UpdateFavoriteTask(getContentResolver(), id, updatedTitle,
-                                    updatedUrl).execute();
-                            dialog.dismiss();
-                        }))
-                .setNeutralButton(R.string.favorite_edit_delete,
-                        (dialog, which) -> {
-                            new DeleteFavoriteTask(getContentResolver()).execute(id);
-                            dialog.dismiss();
-                        })
-                .setNegativeButton(android.R.string.cancel,
-                        (dialog, which) -> dialog.dismiss())
-                .show();
+                .setPositiveButton(R.string.favorite_edit_positive
+                ) { dialog: DialogInterface, _: Int ->
+                    val updatedUrl = urlEdit.text.toString()
+                    val updatedTitle = titleEdit.text.toString()
+                    if (url.isEmpty()) {
+                        urlEdit.error = error
+                        urlEdit.requestFocus()
+                    }
+                    UpdateFavoriteTask(contentResolver, id, updatedTitle,
+                            updatedUrl).execute()
+                    dialog.dismiss()
+                }
+                .setNeutralButton(R.string.favorite_edit_delete
+                ) { dialog: DialogInterface, _: Int ->
+                    DeleteFavoriteTask(contentResolver, id).execute()
+                    dialog.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel
+                ) { dialog: DialogInterface, _: Int -> dialog.dismiss() }
+                .show()
     }
 
-    private static class UpdateFavoriteTask extends AsyncTask<Void, Void, Void> {
-        private final ContentResolver contentResolver;
-        private final long id;
-        private final String title;
-        private final String url;
-
-        UpdateFavoriteTask(ContentResolver contentResolver, long id, String title, String url) {
-            this.contentResolver = contentResolver;
-            this.id = id;
-            this.title = title;
-            this.url = url;
-        }
-
-        @Override
-        protected Void doInBackground(Void... params) {
-            FavoriteProvider.updateItem(contentResolver, id, title, url);
-            return null;
+    private class UpdateFavoriteTask constructor(
+            private val contentResolver: ContentResolver,
+            private val id: Long,
+            private val title: String,
+            private val url: String
+    ) : AsyncTask<Unit, Unit, Unit>() {
+        override fun doInBackground(vararg units: Unit) {
+            FavoriteProvider.updateItem(contentResolver, id, title, url)
         }
     }
 
-    private static class DeleteFavoriteTask extends AsyncTask<Long, Void, Void> {
-        private final ContentResolver contentResolver;
-
-        DeleteFavoriteTask(ContentResolver contentResolver) {
-            this.contentResolver = contentResolver;
-        }
-
-        @Override
-        protected Void doInBackground(Long... ids) {
-            for (Long id : ids) {
-                Uri uri = ContentUris.withAppendedId(FavoriteProvider.Columns.CONTENT_URI, id);
-                contentResolver.delete(uri, null, null);
-            }
-            return null;
+    private class DeleteFavoriteTask constructor(
+            private val contentResolver: ContentResolver,
+            private val id: Long
+    ) : AsyncTask<Unit, Unit, Unit>() {
+        override fun doInBackground(vararg units: Unit) {
+            val uri = ContentUris.withAppendedId(FavoriteProvider.Columns.CONTENT_URI, id)
+            contentResolver.delete(uri, null, null)
         }
     }
 }

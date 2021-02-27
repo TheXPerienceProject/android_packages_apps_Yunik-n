@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,30 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon;
+package mx.xperience.Yunikon
 
-import android.app.Application;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
+import android.app.Application
+import android.preference.PreferenceManager
+import mx.xperience.Yunikon.utils.NetworkSecurityPolicyUtils.isSupported
+import mx.xperience.Yunikon.utils.NetworkSecurityPolicyUtils.setCleartextTrafficPermitted
 
-import mx.xperience.Yunikon.utils.NetworkSecurityPolicyUtils;
-
-public class YuniApp extends Application {
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-
-        setClearTextTrafficConfig();
+class YuniApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        setClearTextTrafficConfig()
     }
 
-    private void setClearTextTrafficConfig() {
-        if (!NetworkSecurityPolicyUtils.isSupported()) {
-            return;
+    private fun setClearTextTrafficConfig() {
+        if (!isSupported) {
+            return
         }
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean isPermitted = prefs.getBoolean("key_clear_text_traffic", true);
-        NetworkSecurityPolicyUtils.setCleartextTrafficPermitted(isPermitted);
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val isPermitted = prefs.getBoolean("key_clear_text_traffic", true)
+        setCleartextTrafficPermitted(isPermitted)
     }
 }

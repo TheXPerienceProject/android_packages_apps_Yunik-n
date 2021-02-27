@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 The LineageOS Project
- * Copyright (C) 2019 The XPerience Project
+ * Copyright (C) 2019-2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.utils;
+package mx.xperience.Yunikon.utils
 
-import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import mx.xperience.Yunikon.MainActivity
 
-import mx.xperience.Yunikon.MainActivity;
-
-public final class TabUtils {
-    public static void openInNewTab(Context context, String url, boolean incognito) {
-        Intent intent = new Intent(context, MainActivity.class);
-        if (url != null && !url.isEmpty()) {
-            intent.setData(Uri.parse(url));
+object TabUtils {
+    fun openInNewTab(context: Context, url: String?, incognito: Boolean) {
+        val intent = Intent(context, MainActivity::class.java)
+        if (url != null && url.isNotEmpty()) {
+            intent.data = Uri.parse(url)
         }
-        intent.setAction(Intent.ACTION_MAIN);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-        intent.putExtra(IntentUtils.EXTRA_INCOGNITO, incognito);
-        context.startActivity(intent);
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+        intent.putExtra(IntentUtils.EXTRA_INCOGNITO, incognito)
+        context.startActivity(intent)
     }
 }

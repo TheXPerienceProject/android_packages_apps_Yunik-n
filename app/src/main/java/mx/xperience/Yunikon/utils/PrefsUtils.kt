@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
- * Copyright (C) 2019 The XPerience Project
+ * Copyright (C) 2019-2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,97 +14,87 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.utils;
+package mx.xperience.Yunikon.utils
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
+import android.content.Context
+import android.preference.PreferenceManager
+import mx.xperience.Yunikon.R
 
-import mx.xperience.Yunikon.R;
-
-public final class PrefsUtils {
-    private static final String KEY_SEARCH_ENGINE = "key_search_engine";
-    private static final String KEY_HOME_PAGE = "key_home_page";
-    private static final String KEY_ADVANCED_SHARE = "key_advanced_share";
-    private static final String KEY_LOOKLOCK = "key_looklock";
-    private static final String KEY_JS = "key_javascript";
-    private static final String KEY_LOCATION = "key_location";
-    private static final String KEY_COOKIE = "key_cookie";
-    private static final String KEY_DO_NOT_TRACK = "key_do_not_track";
-    private static final String KEY_SUGGESTION_PROVIDER = "key_suggestion_provider";
-    private static final String KEY_INCOGNITO_POLICY = "key_incognito_policy";
-
-    private PrefsUtils() {
-    }
-
-    public static String getSearchEngine(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+object PrefsUtils {
+    private const val KEY_SEARCH_ENGINE = "key_search_engine"
+    private const val KEY_HOME_PAGE = "key_home_page"
+    private const val KEY_ADVANCED_SHARE = "key_advanced_share"
+    private const val KEY_LOOKLOCK = "key_looklock"
+    private const val KEY_JS = "key_javascript"
+    private const val KEY_LOCATION = "key_location"
+    private const val KEY_COOKIE = "key_cookie"
+    private const val KEY_DO_NOT_TRACK = "key_do_not_track"
+    private const val KEY_SUGGESTION_PROVIDER = "key_suggestion_provider"
+    private const val KEY_INCOGNITO_POLICY = "key_incognito_policy"
+    fun getSearchEngine(context: Context): String? {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         return prefs.getString(KEY_SEARCH_ENGINE,
-                context.getString(R.string.default_search_engine));
+                context.getString(R.string.default_search_engine))
     }
 
-    public static String getHomePage(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getString(KEY_HOME_PAGE, context.getString(R.string.default_home_page));
+    fun getHomePage(context: Context): String? {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getString(KEY_HOME_PAGE, context.getString(R.string.default_home_page))
     }
 
-    public static boolean getAdvancedShare(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getBoolean(KEY_ADVANCED_SHARE, false);
+    fun getAdvancedShare(context: Context?): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getBoolean(KEY_ADVANCED_SHARE, false)
     }
 
-    public static boolean getLookLock(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getBoolean(KEY_LOOKLOCK, false);
+    fun getLookLock(context: Context?): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getBoolean(KEY_LOOKLOCK, false)
     }
 
-    public static boolean getJavascript(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getBoolean(KEY_JS, true);
+    fun getJavascript(context: Context?): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getBoolean(KEY_JS, true)
     }
 
-    public static boolean getLocation(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getBoolean(KEY_LOCATION, true);
+    fun getLocation(context: Context?): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getBoolean(KEY_LOCATION, true)
     }
 
-    public static boolean getCookie(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getBoolean(KEY_COOKIE, true);
+    fun getCookie(context: Context?): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getBoolean(KEY_COOKIE, true)
     }
 
-    public static boolean getDoNotTrack(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getBoolean(KEY_DO_NOT_TRACK, false);
+    fun getDoNotTrack(context: Context?): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getBoolean(KEY_DO_NOT_TRACK, false)
     }
 
-    public static SuggestionProviderType getSuggestionProvider(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        try {
-            String value = prefs.getString(KEY_SUGGESTION_PROVIDER,
-                    context.getString(R.string.default_suggestion_provider));
-            return SuggestionProviderType.valueOf(value);
-        } catch (IllegalArgumentException ignored) {
-            return SuggestionProviderType.NONE;
+    @JvmStatic
+    fun getSuggestionProvider(context: Context): SuggestionProviderType {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return try {
+            val value = prefs.getString(KEY_SUGGESTION_PROVIDER,
+                    context.getString(R.string.default_suggestion_provider))
+            SuggestionProviderType.valueOf(value!!)
+        } catch (ignored: IllegalArgumentException) {
+            SuggestionProviderType.NONE
         }
     }
 
-    public static int getIncognitoPolicy(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return Integer.parseInt(prefs.getString(KEY_INCOGNITO_POLICY, "0"));
+    fun getIncognitoPolicy(context: Context?): Int {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getString(KEY_INCOGNITO_POLICY, "0")!!.toInt()
     }
 
-    public static void setHomePage(Context context, String value) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        prefs.edit().putString(KEY_HOME_PAGE, value).apply();
+    fun setHomePage(context: Context?, value: String?) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        prefs.edit().putString(KEY_HOME_PAGE, value).apply()
     }
 
-    public enum SuggestionProviderType {
-        BAIDU,
-        BING,
-        DUCK,
-        GOOGLE,
-        YAHOO,
-        NONE
+    enum class SuggestionProviderType {
+        BAIDU, BING, DUCK, GOOGLE, YAHOO, NONE
     }
 }

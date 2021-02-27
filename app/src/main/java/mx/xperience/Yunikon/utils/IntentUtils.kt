@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.utils;
+package mx.xperience.Yunikon.utils
 
-public final class IntentUtils {
-    public static final String EXTRA_DESKTOP_MODE = "extra_desktop_mode";
-    public static final String EXTRA_INCOGNITO = "extra_incognito";
-    public static final String EXTRA_URL = "extra_url";
-
-    public static final String EVENT_CHANGE_UI_MODE = "intent_change_ui_mode";
-
-    public static final String EVENT_URL_RESOLVED = "intent_url_resolved";
+object IntentUtils {
+    const val EXTRA_DESKTOP_MODE = "extra_desktop_mode"
+    const val EXTRA_INCOGNITO = "extra_incognito"
+    const val EXTRA_URL = "extra_url"
+    const val EVENT_CHANGE_UI_MODE = "intent_change_ui_mode"
+    const val EVENT_URL_RESOLVED = "intent_url_resolved"
 }

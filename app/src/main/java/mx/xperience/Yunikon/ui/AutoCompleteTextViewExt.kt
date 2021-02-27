@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,89 +14,70 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.ui;
+package mx.xperience.Yunikon.ui
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.LinearGradient;
-import android.graphics.Rect;
-import android.graphics.Shader;
-import android.util.AttributeSet;
+import android.content.Context
+import android.graphics.*
+import android.util.AttributeSet
+import androidx.appcompat.widget.AppCompatAutoCompleteTextView
 
-import androidx.appcompat.widget.AppCompatAutoCompleteTextView;
+class AutoCompleteTextViewExt : AppCompatAutoCompleteTextView {
+    private var mFocusChangeListener: OnFocusChangeListener? = null
+    private var mPositionX = 0
 
-public class AutoCompleteTextViewExt extends AppCompatAutoCompleteTextView {
-    private OnFocusChangeListener mFocusChangeListener;
-    private int mPositionX;
+    constructor(context: Context?) : super(context!!)
+    constructor(context: Context?, attrs: AttributeSet?) : super(context!!, attrs)
+    constructor(context: Context?, attrs: AttributeSet?, defStyle: Int) :
+            super(context!!, attrs, defStyle)
 
-    public AutoCompleteTextViewExt(Context context) {
-        super(context);
-    }
-
-    public AutoCompleteTextViewExt(Context context, AttributeSet attrs) {
-        super(context, attrs);
-    }
-
-    public AutoCompleteTextViewExt(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-    }
-
-    private static LinearGradient getGradient(float widthEnd, float fadeStart,
-                                              float stopStart, float stopEnd, int color) {
-        return new LinearGradient(0, 0, widthEnd, 0,
-                new int[]{color, Color.TRANSPARENT, color, color, Color.TRANSPARENT},
-                new float[]{0, fadeStart, stopStart, stopEnd, 1f}, Shader.TileMode.CLAMP);
-    }
-
-    @Override
-    public OnFocusChangeListener getOnFocusChangeListener() {
-        return mFocusChangeListener;
+    override fun getOnFocusChangeListener(): OnFocusChangeListener {
+        return mFocusChangeListener!!
     }
 
     // Override View's focus change listener handling so that we're able to
     // call it before the actual focus change handling, in particular before
     // the IME is fired up.
-    @Override
-    public void setOnFocusChangeListener(OnFocusChangeListener l) {
-        mFocusChangeListener = l;
+    override fun setOnFocusChangeListener(l: OnFocusChangeListener) {
+        mFocusChangeListener = l
     }
 
-    @Override
-    protected void onFocusChanged(boolean gainFocus, int direction, Rect previouslyFocusedRect) {
+    override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
         if (mFocusChangeListener != null) {
-            mFocusChangeListener.onFocusChange(this, gainFocus);
+            mFocusChangeListener!!.onFocusChange(this, gainFocus)
         }
-        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
     }
 
-    @Override
-    protected void onScrollChanged(int x, int y, int oldX, int oldY) {
-        super.onScrollChanged(x, y, oldX, oldY);
-        mPositionX = x;
-        requestLayout();
+    override fun onScrollChanged(x: Int, y: Int, oldX: Int, oldY: Int) {
+        super.onScrollChanged(x, y, oldX, oldY)
+        mPositionX = x
+        requestLayout()
     }
 
-    @Override
-    public void onDraw(Canvas canvas) {
-        float lineWidth = getLayout().getLineWidth(0);
-        float width = getMeasuredWidth();
-
-        if (getText() == null || getText().length() == 0 || lineWidth <= width) {
-            getPaint().setShader(null);
-            super.onDraw(canvas);
-            return;
+    public override fun onDraw(canvas: Canvas) {
+        val lineWidth = layout.getLineWidth(0)
+        val width = measuredWidth.toFloat()
+        if (text == null || text.isEmpty() || lineWidth <= width) {
+            paint.shader = null
+            super.onDraw(canvas)
+            return
         }
+        val textColor = currentTextColor
+        val widthEnd = width + mPositionX
+        val percent: Float = (width * 0.2).toFloat()
+        val fadeStart = mPositionX / widthEnd
+        val stopStart: Float = if (mPositionX > 0) (mPositionX + percent) / widthEnd else 0f
+        val stopEnd: Float = (widthEnd - if (lineWidth > widthEnd) percent else 0f) / widthEnd
+        paint.shader = getGradient(widthEnd, fadeStart, stopStart, stopEnd, textColor)
+        super.onDraw(canvas)
+    }
 
-        int textColor = getCurrentTextColor();
-        float widthEnd = width + mPositionX;
-        float percent = (int) (width * 0.2);
-
-        float fadeStart = mPositionX / widthEnd;
-
-        float stopStart = mPositionX > 0 ? ((mPositionX + percent) / widthEnd) : 0;
-        float stopEnd = (widthEnd - (lineWidth > widthEnd ? percent : 0)) / widthEnd;
-        getPaint().setShader(getGradient(widthEnd, fadeStart, stopStart, stopEnd, textColor));
-        super.onDraw(canvas);
+    companion object {
+        private fun getGradient(widthEnd: Float, fadeStart: Float,
+                                stopStart: Float, stopEnd: Float, color: Int): LinearGradient {
+            return LinearGradient(0f, 0f, widthEnd, 0f,
+                    intArrayOf(color, Color.TRANSPARENT, color, color, Color.TRANSPARENT),
+                    floatArrayOf(0f, fadeStart, stopStart, stopEnd, 1f), Shader.TileMode.CLAMP)
+        }
     }
 }

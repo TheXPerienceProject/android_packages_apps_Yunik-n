@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,102 +14,90 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.utils;
+package mx.xperience.Yunikon.utils
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.res.Resources;
-import android.content.res.TypedArray;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
-import android.graphics.Rect;
-import android.preference.PreferenceManager;
-import android.util.TypedValue;
-import android.view.View;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.ImageButton;
+import android.content.Context
+import android.content.res.Resources
+import android.graphics.*
+import android.preference.PreferenceManager
+import android.util.TypedValue
+import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.widget.ImageButton
+import androidx.annotation.AttrRes
+import androidx.annotation.StyleRes
+import androidx.core.graphics.ColorUtils
+import androidx.palette.graphics.Palette
+import mx.xperience.Yunikon.R
 
-import mx.xperience.Yunikon.R;
-
-import androidx.annotation.AttrRes;
-import androidx.annotation.StyleRes;
-import androidx.core.graphics.ColorUtils;
-import androidx.palette.graphics.Palette;
-
-public final class UiUtils {
-
-    private UiUtils() {
+object UiUtils {
+    @JvmStatic
+    fun isColorLight(color: Int): Boolean {
+        val red = Color.red(color)
+        val green = Color.green(color)
+        val blue = Color.blue(color)
+        val hsl = FloatArray(3)
+        ColorUtils.RGBToHSL(red, green, blue, hsl)
+        return hsl[2] > 0.5f
     }
 
-    public static boolean isColorLight(int color) {
-        int red = Color.red(color);
-        int green = Color.green(color);
-        int blue = Color.blue(color);
-
-        float[] hsl = new float[3];
-        ColorUtils.RGBToHSL(red, green, blue, hsl);
-        return hsl[2] > 0.5f;
+    fun getColor(bitmap: Bitmap?, incognito: Boolean): Int {
+        val palette = Palette.from(bitmap!!).generate()
+        val fallback = Color.TRANSPARENT
+        return if (incognito) palette.getMutedColor(fallback) else palette.getVibrantColor(fallback)
     }
 
-    public static int getColor(Bitmap bitmap, boolean incognito) {
-        Palette palette = Palette.from(bitmap).generate();
-        final int fallback = Color.TRANSPARENT;
-        return incognito ? palette.getMutedColor(fallback) : palette.getVibrantColor(fallback);
+    fun getShortcutIcon(bitmap: Bitmap, themeColor: Int): Bitmap {
+        val out = Bitmap.createBitmap(bitmap.width, bitmap.width,
+                Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        val paint = Paint()
+        val rect = Rect(0, 0, bitmap.width, bitmap.width)
+        val radius = (bitmap.width / 2).toFloat()
+        paint.isAntiAlias = true
+        paint.color = themeColor
+        canvas.drawARGB(0, 0, 0, 0)
+        canvas.drawCircle(radius, radius, radius, paint)
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+        canvas.drawBitmap(bitmap, rect, rect, paint)
+        return Bitmap.createScaledBitmap(out, 192, 192, true)
     }
 
-    public static Bitmap getShortcutIcon(Bitmap bitmap, int themeColor) {
-        Bitmap out = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getWidth(),
-                Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(out);
-        Paint paint = new Paint();
-        Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getWidth());
-        float radius = bitmap.getWidth() / 2;
-        paint.setAntiAlias(true);
-        paint.setColor(themeColor);
-        canvas.drawARGB(0, 0, 0, 0);
-        canvas.drawCircle(radius, radius, radius, paint);
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-        canvas.drawBitmap(bitmap, rect, rect, paint);
-        return Bitmap.createScaledBitmap(out, 192, 192, true);
+    @JvmStatic
+    fun getPositionInTime(timeMilliSec: Long): Int {
+        val diff = System.currentTimeMillis() - timeMilliSec
+        val hour = (1000 * 60 * 60).toLong()
+        val day = hour * 24
+        val week = day * 7
+        val month = day * 30
+        return if (hour > diff) 0 else if (day > diff) 1 else if (week > diff) 2 else if (month > diff) 3 else 4
     }
 
-    public static int getPositionInTime(long timeMilliSec) {
-        long diff = System.currentTimeMillis() - timeMilliSec;
-
-        long hour = 1000 * 60 * 60;
-        long day = hour * 24;
-        long week = day * 7;
-        long month = day * 30;
-
-        return hour > diff ? 0 : day > diff ? 1 : week > diff ? 2 : month > diff ? 3 : 4;
-    }
-
-    public static float dpToPx(Resources res, float dp) {
-        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, res.getDisplayMetrics());
+    @JvmStatic
+    fun dpToPx(res: Resources, dp: Float): Float {
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, res.displayMetrics)
     }
 
     /**
      * Shows the software keyboard.
      *
-     * @param view The currently focused {@link View}, which would receive soft keyboard input.
+     * @param view The currently focused [View], which would receive soft keyboard input.
      */
-    public static void showKeyboard(View view) {
-        InputMethodManager imm = view.getContext().getSystemService(InputMethodManager.class);
-        imm.toggleSoftInputFromWindow(view.getWindowToken(), 0, 0);
+    @JvmStatic
+    fun showKeyboard(view: View) {
+        val imm = view.context.getSystemService(InputMethodManager::class.java)
+        imm.toggleSoftInputFromWindow(view.windowToken, 0, 0)
     }
 
     /**
      * Hides the keyboard.
      *
-     * @param view The {@link View} that is currently accepting input.
+     * @param view The [View] that is currently accepting input.
      */
-    public static void hideKeyboard(View view) {
-        InputMethodManager imm = view.getContext().getSystemService(InputMethodManager.class);
-        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    @JvmStatic
+    fun hideKeyboard(view: View) {
+        val imm = view.context.getSystemService(InputMethodManager::class.java)
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     /**
@@ -118,25 +107,26 @@ public final class UiUtils {
      * @param enabled The state of the menu item
      * @param button  The menu item to modify
      */
-    public static void setImageButtonEnabled(ImageButton button, boolean enabled) {
-        button.setEnabled(enabled);
-        button.setAlpha(enabled ? 1.0f : 0.4f);
+    @JvmStatic
+    fun setImageButtonEnabled(button: ImageButton, enabled: Boolean) {
+        button.isEnabled = enabled
+        button.alpha = if (enabled) 1.0f else 0.4f
     }
 
-    public static boolean isTablet(Context context) {
-        return context.getResources().getBoolean(R.bool.is_tablet);
+    fun isTablet(context: Context): Boolean {
+        return context.resources.getBoolean(R.bool.is_tablet)
     }
 
-    public static boolean isReachModeEnabled(Context context) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        return prefs.getBoolean("key_reach_mode", false);
+    fun isReachModeEnabled(context: Context?): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        return prefs.getBoolean("key_reach_mode", false)
     }
 
-    public static float getDimenAttr(Context context, @StyleRes int style, @AttrRes int dimen) {
-        int[] args = {dimen};
-        TypedArray array = context.obtainStyledAttributes(style, args);
-        float result = array.getDimension(0, 0f);
-        array.recycle();
-        return result;
+    fun getDimenAttr(context: Context, @StyleRes style: Int, @AttrRes dimen: Int): Float {
+        val args = intArrayOf(dimen)
+        val array = context.obtainStyledAttributes(style, args)
+        val result = array.getDimension(0, 0f)
+        array.recycle()
+        return result
     }
 }

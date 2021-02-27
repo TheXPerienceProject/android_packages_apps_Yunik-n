@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,233 +14,191 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.favorite;
+package mx.xperience.Yunikon.favorite
 
-import android.content.ContentProvider;
-import android.content.ContentResolver;
-import android.content.ContentUris;
-import android.content.ContentValues;
-import android.content.Context;
-import android.content.UriMatcher;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
-import android.database.sqlite.SQLiteQueryBuilder;
-import android.net.Uri;
-import android.provider.BaseColumns;
+import android.content.*
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+import android.database.sqlite.SQLiteQueryBuilder
+import android.net.Uri
+import android.provider.BaseColumns
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-public class FavoriteProvider extends ContentProvider {
-
-    private static final int MATCH_ALL = 0;
-    private static final int MATCH_ID = 1;
-    private static final UriMatcher sURIMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-
-    static {
-        sURIMatcher.addURI(Columns.AUTHORITY, "favorite", MATCH_ALL);
-        sURIMatcher.addURI(Columns.AUTHORITY, "favorite/#", MATCH_ID);
-    }
-
-    private FavoriteDbHelper mDbHelper;
-
-    public static void addOrUpdateItem(ContentResolver resolver, String title, String url,
-                                       int color) {
-        long existingId = -1;
-        Cursor cursor = resolver.query(Columns.CONTENT_URI, new String[]{Columns._ID},
-                Columns.URL + "=?", new String[]{url}, null);
-        if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                existingId = cursor.getLong(0);
+class FavoriteProvider : ContentProvider() {
+    companion object {
+        private const val MATCH_ALL = 0
+        private const val MATCH_ID = 1
+        private val sURIMatcher = UriMatcher(UriMatcher.NO_MATCH)
+        fun addOrUpdateItem(resolver: ContentResolver, title: String?, url: String,
+                            color: Int) {
+            var existingId: Long = -1
+            val cursor = resolver.query(Columns.CONTENT_URI, arrayOf(BaseColumns._ID),
+                    Columns.URL + "=?", arrayOf(url), null)
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    existingId = cursor.getLong(0)
+                }
+                cursor.close()
             }
-            cursor.close();
+            val values = ContentValues()
+            values.put(Columns.TITLE, title)
+            values.put(Columns.COLOR, color)
+            if (existingId >= 0) {
+                resolver.update(ContentUris.withAppendedId(Columns.CONTENT_URI, existingId),
+                        values, null, null)
+            } else {
+                values.put(Columns.URL, url)
+                resolver.insert(Columns.CONTENT_URI, values)
+            }
         }
 
-        ContentValues values = new ContentValues();
-        values.put(Columns.TITLE, title);
-        values.put(Columns.COLOR, color);
+        fun updateItem(resolver: ContentResolver, id: Long, title: String?, url: String?) {
+            val values = ContentValues()
+            values.put(Columns.TITLE, title)
+            values.put(Columns.URL, url)
+            resolver.update(ContentUris.withAppendedId(Columns.CONTENT_URI, id), values, null, null)
+        }
 
-        if (existingId >= 0) {
-            resolver.update(ContentUris.withAppendedId(Columns.CONTENT_URI, existingId),
-                    values, null, null);
-        } else {
-            values.put(Columns.URL, url);
-            resolver.insert(Columns.CONTENT_URI, values);
+        init {
+            sURIMatcher.addURI(Columns.AUTHORITY, "favorite", MATCH_ALL)
+            sURIMatcher.addURI(Columns.AUTHORITY, "favorite/#", MATCH_ID)
         }
     }
 
-    public static void updateItem(ContentResolver resolver, long id, String title, String url) {
-        ContentValues values = new ContentValues();
-        values.put(Columns.TITLE, title);
-        values.put(Columns.URL, url);
-
-        resolver.update(ContentUris.withAppendedId(Columns.CONTENT_URI, id), values, null, null);
+    private lateinit var mDbHelper: FavoriteDbHelper
+    override fun onCreate(): Boolean {
+        mDbHelper = FavoriteDbHelper(context)
+        return true
     }
 
-    @Override
-    public boolean onCreate() {
-        mDbHelper = new FavoriteDbHelper(getContext());
-        return true;
-    }
-
-    @Nullable
-    @Override
-    public Cursor query(@NonNull Uri uri, @Nullable String[] projection,
-                        @Nullable String selection, @Nullable String[] selectionArgs,
-                        @Nullable String sortOrder) {
-        SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
-        int match = sURIMatcher.match(uri);
-
-        qb.setTables(FavoriteDbHelper.DB_TABLE_FAVORITES);
-
-        switch (match) {
-            case MATCH_ALL:
-                break;
-            case MATCH_ID:
-                qb.appendWhere(Columns._ID + " = " + uri.getLastPathSegment());
-                break;
-            default:
-                return null;
+    override fun query(uri: Uri, projection: Array<String>?,
+                       selection: String?, selectionArgs: Array<String>?,
+                       sortOrder: String?): Cursor? {
+        val qb = SQLiteQueryBuilder()
+        val match = sURIMatcher.match(uri)
+        qb.tables = FavoriteDbHelper.DB_TABLE_FAVORITES
+        when (match) {
+            MATCH_ALL -> {
+            }
+            MATCH_ID -> qb.appendWhere(BaseColumns._ID + " = " + uri.lastPathSegment)
+            else -> return null
         }
-
-        SQLiteDatabase db = mDbHelper.getReadableDatabase();
-        Cursor ret = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder);
-
-        ret.setNotificationUri(getContext().getContentResolver(), uri);
-
-        return ret;
+        val db = mDbHelper.readableDatabase
+        val ret = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder)
+        ret.setNotificationUri(context?.contentResolver, uri)
+        return ret
     }
 
-    @Nullable
-    @Override
-    public String getType(@NonNull Uri uri) {
-        return null;
+    override fun getType(uri: Uri): String? {
+        return null
     }
 
-    @Nullable
-    @Override
-    public Uri insert(@NonNull Uri uri, @Nullable ContentValues values) {
+    override fun insert(uri: Uri, values: ContentValues?): Uri? {
         if (sURIMatcher.match(uri) != MATCH_ALL) {
-            return null;
+            return null
         }
-
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        long rowID = db.insert(FavoriteDbHelper.DB_TABLE_FAVORITES, null, values);
+        val db = mDbHelper.writableDatabase
+        val rowID = db.insert(FavoriteDbHelper.DB_TABLE_FAVORITES, null, values)
         if (rowID <= 0) {
-            return null;
+            return null
         }
-
-        getContext().getContentResolver().notifyChange(Columns.CONTENT_URI, null);
-
-        return ContentUris.withAppendedId(Columns.CONTENT_URI, rowID);
+        context?.contentResolver?.notifyChange(Columns.CONTENT_URI, null)
+        return ContentUris.withAppendedId(Columns.CONTENT_URI, rowID)
     }
 
-    @Override
-    public int update(@NonNull Uri uri, @Nullable ContentValues values,
-                      @Nullable String selection, @Nullable String[] selectionArgs) {
-        int count;
-        int match = sURIMatcher.match(uri);
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-
-        switch (match) {
-            case MATCH_ALL:
-                count = db.update(FavoriteDbHelper.DB_TABLE_FAVORITES,
-                        values, selection, selectionArgs);
-                break;
-            case MATCH_ID:
+    override fun update(uri: Uri, values: ContentValues?,
+                        selection: String?, selectionArgs: Array<String>?): Int {
+        val count: Int
+        val match = sURIMatcher.match(uri)
+        val db = mDbHelper.writableDatabase
+        count = when (match) {
+            MATCH_ALL -> db.update(FavoriteDbHelper.DB_TABLE_FAVORITES,
+                    values, selection, selectionArgs)
+            MATCH_ID -> {
                 if (selection != null || selectionArgs != null) {
-                    throw new UnsupportedOperationException(
-                            "Cannot update URI " + uri + " with a where clause");
+                    throw UnsupportedOperationException(
+                            "Cannot update URI $uri with a where clause")
                 }
-                count = db.update(FavoriteDbHelper.DB_TABLE_FAVORITES, values, Columns._ID + " = ?",
-                        new String[]{uri.getLastPathSegment()});
-                break;
-            default:
-                throw new UnsupportedOperationException("Cannot update that URI: " + uri);
+                db.update(FavoriteDbHelper.DB_TABLE_FAVORITES,
+                        values, BaseColumns._ID + " = ?", arrayOf(uri.lastPathSegment))
+            }
+            else -> throw UnsupportedOperationException("Cannot update that URI: $uri")
         }
-
         if (count > 0) {
-            getContext().getContentResolver().notifyChange(Columns.CONTENT_URI, null);
+            context?.contentResolver?.notifyChange(Columns.CONTENT_URI, null)
         }
-
-        return count;
+        return count
     }
 
-    @Override
-    public int delete(@NonNull Uri uri, @Nullable String selection,
-                      @Nullable String[] selectionArgs) {
-        int match = sURIMatcher.match(uri);
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-
-        switch (match) {
-            case MATCH_ALL:
-                break;
-            case MATCH_ID:
-                if (selection != null || selectionArgs != null) {
-                    throw new UnsupportedOperationException(
-                            "Cannot delete URI " + uri + " with a where clause");
+    override fun delete(uri: Uri, selection: String?,
+                        selectionArgs: Array<String>?): Int {
+        var localSelection = selection
+        var localSelectionArgs = selectionArgs
+        val match = sURIMatcher.match(uri)
+        val db = mDbHelper.writableDatabase
+        when (match) {
+            MATCH_ALL -> {
+            }
+            MATCH_ID -> {
+                if (localSelection != null || localSelectionArgs != null) {
+                    throw UnsupportedOperationException(
+                            "Cannot delete URI $uri with a where clause")
                 }
-                selection = Columns._ID + " = ?";
-                selectionArgs = new String[]{uri.getLastPathSegment()};
-                break;
-            default:
-                throw new UnsupportedOperationException("Cannot delete the URI " + uri);
+                localSelection = BaseColumns._ID + " = ?"
+                arrayOf(uri.lastPathSegment).toString().also { localSelectionArgs = arrayOf(it) }
+            }
+            else -> throw UnsupportedOperationException("Cannot delete the URI $uri")
         }
-
-        int count = db.delete(FavoriteDbHelper.DB_TABLE_FAVORITES, selection, selectionArgs);
-
+        val count = db.delete(FavoriteDbHelper.DB_TABLE_FAVORITES,
+                localSelection, localSelectionArgs)
         if (count > 0) {
-            getContext().getContentResolver().notifyChange(Columns.CONTENT_URI, null);
+            context?.contentResolver?.notifyChange(Columns.CONTENT_URI, null)
         }
-
-        return count;
+        return count
     }
 
-    public interface Columns extends BaseColumns {
-        String AUTHORITY = "mx.xperience.Yunikon.favorite";
-        Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/favorite");
-
-        String TITLE = "title";
-        String URL = "url";
-        String COLOR = "color";
+    interface Columns : BaseColumns {
+        companion object {
+            const val AUTHORITY = "mx.xperience.Yunikon.favorite"
+            val CONTENT_URI: Uri = Uri.parse("content://$AUTHORITY/favorite")
+            const val TITLE = "title"
+            const val URL = "url"
+            const val COLOR = "color"
+        }
     }
 
-    private static class FavoriteDbHelper extends SQLiteOpenHelper {
-        private static final int DB_VERSION = 2;
-        private static final String DB_NAME = "FavoriteDatabase";
-        private static final String DB_TABLE_FAVORITES = "favorites";
-
-        FavoriteDbHelper(Context context) {
-            super(context, DB_NAME, null, DB_VERSION);
-        }
-
-        @Override
-        public void onCreate(SQLiteDatabase db) {
+    private class FavoriteDbHelper constructor(context: Context?) :
+            SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
+        override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE " + DB_TABLE_FAVORITES + " (" +
-                    Columns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     Columns.TITLE + " TEXT, " +
                     Columns.URL + " TEXT, " +
-                    Columns.COLOR + " INTEGER)");
+                    Columns.COLOR + " INTEGER)")
         }
 
-        @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             if (oldVersion < 2) {
                 // Recreate table with auto incrementing id column.
                 db.execSQL("CREATE TABLE " + DB_TABLE_FAVORITES + "_new (" +
-                        Columns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                         Columns.TITLE + " TEXT, " +
                         Columns.URL + " TEXT, " +
-                        Columns.COLOR + " INTEGER)");
+                        Columns.COLOR + " INTEGER)")
                 db.execSQL("INSERT INTO " + DB_TABLE_FAVORITES + "_new("
                         + Columns.TITLE + ", " + Columns.URL + ", " + Columns.COLOR
                         + ") SELECT " + Columns.TITLE + ", " + Columns.URL + ", " + Columns.COLOR
-                        + " FROM " + DB_TABLE_FAVORITES);
-                db.execSQL("DROP TABLE " + DB_TABLE_FAVORITES);
+                        + " FROM " + DB_TABLE_FAVORITES)
+                db.execSQL("DROP TABLE $DB_TABLE_FAVORITES")
                 db.execSQL("ALTER TABLE " + DB_TABLE_FAVORITES
-                        + "_new RENAME TO " + DB_TABLE_FAVORITES);
+                        + "_new RENAME TO " + DB_TABLE_FAVORITES)
             }
+        }
+
+        companion object {
+            private const val DB_VERSION = 2
+            private const val DB_NAME = "FavoriteDatabase"
+            const val DB_TABLE_FAVORITES = "favorites"
         }
     }
 }

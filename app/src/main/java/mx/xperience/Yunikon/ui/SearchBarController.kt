@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,153 +14,130 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.ui;
+package mx.xperience.Yunikon.ui
 
-import android.text.Editable;
-import android.text.TextUtils;
-import android.text.TextWatcher;
-import android.view.KeyEvent;
-import android.view.View;
-import android.view.inputmethod.EditorInfo;
-import android.webkit.WebView;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.TextView;
+import android.text.Editable
+import android.text.TextUtils
+import android.text.TextWatcher
+import android.view.KeyEvent
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.webkit.WebView
+import android.webkit.WebView.FindListener
+import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.TextView
+import android.widget.TextView.OnEditorActionListener
+import mx.xperience.Yunikon.utils.UiUtils.hideKeyboard
+import mx.xperience.Yunikon.utils.UiUtils.setImageButtonEnabled
+import mx.xperience.Yunikon.utils.UiUtils.showKeyboard
 
-import mx.xperience.Yunikon.utils.UiUtils;
-
-public class SearchBarController implements
-        TextWatcher, TextView.OnEditorActionListener, WebView.FindListener, View.OnClickListener {
-    private WebView mWebView;
-    private EditText mEditor;
-    private TextView mStatus;
-    private ImageButton mNextButton;
-    private ImageButton mPrevButton;
-    private ImageButton mCancelButton;
-    private OnCancelListener mListener;
-    private boolean mHasStartedSearch;
-    private int mCurrentResultPosition;
-    private int mTotalResultCount;
-    public SearchBarController(WebView webView, EditText editor, TextView status,
-                               ImageButton prevButton, ImageButton nextButton,
-                               ImageButton cancelButton, OnCancelListener listener) {
-        mWebView = webView;
-        mEditor = editor;
-        mStatus = status;
-        mNextButton = nextButton;
-        mPrevButton = prevButton;
-        mCancelButton = cancelButton;
-        mListener = listener;
-
-        mEditor.addTextChangedListener(this);
-        mEditor.setOnEditorActionListener(this);
-        mWebView.setFindListener(this);
-        mPrevButton.setOnClickListener(this);
-        mNextButton.setOnClickListener(this);
-        mCancelButton.setOnClickListener(this);
+class SearchBarController(private val mWebView: WebView, private val mEditor: EditText, private val mStatus: TextView,
+                          private val mPrevButton: ImageButton, private val mNextButton: ImageButton,
+                          private val mCancelButton: ImageButton, private val mListener: OnCancelListener) : TextWatcher, OnEditorActionListener, FindListener, View.OnClickListener {
+    private var mHasStartedSearch = false
+    private var mCurrentResultPosition = 0
+    private var mTotalResultCount = 0
+    fun onShow() {
+        mEditor.requestFocus()
+        showKeyboard(mEditor)
+        clearSearchResults()
+        updateNextAndPrevButtonEnabledState()
+        updateStatusText()
     }
 
-    public void onShow() {
-        mEditor.requestFocus();
-        UiUtils.showKeyboard(mEditor);
-        clearSearchResults();
-        updateNextAndPrevButtonEnabledState();
-        updateStatusText();
+    fun onCancel() {
+        mStatus.text = null
+        mWebView.clearMatches()
+        mListener.onCancelSearch()
     }
 
-    public void onCancel() {
-        mStatus.setText(null);
-        mWebView.clearMatches();
-        mListener.onCancelSearch();
+    override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
+    override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
+    override fun afterTextChanged(s: Editable) {
+        startSearch()
+        updateNextAndPrevButtonEnabledState()
     }
 
-    @Override
-    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-    }
-
-    @Override
-    public void onTextChanged(CharSequence s, int start, int before, int count) {
-    }
-
-    @Override
-    public void afterTextChanged(Editable s) {
-        startSearch();
-        updateNextAndPrevButtonEnabledState();
-    }
-
-    @Override
-    public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
+    override fun onEditorAction(view: TextView, actionId: Int, event: KeyEvent): Boolean {
         if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-            UiUtils.hideKeyboard(view);
-            startSearch();
-            return true;
+            hideKeyboard(view)
+            startSearch()
+            return true
         }
-        return false;
+        return false
     }
 
-    @Override
-    public void onFindResultReceived(int activeMatchOrdinal, int numberOfMatches,
-                                     boolean isDoneCounting) {
-        mCurrentResultPosition = activeMatchOrdinal;
-        mTotalResultCount = numberOfMatches;
-
-        updateNextAndPrevButtonEnabledState();
-        updateStatusText();
+    override fun onFindResultReceived(activeMatchOrdinal: Int, numberOfMatches: Int,
+                                      isDoneCounting: Boolean) {
+        mCurrentResultPosition = activeMatchOrdinal
+        mTotalResultCount = numberOfMatches
+        updateNextAndPrevButtonEnabledState()
+        updateStatusText()
     }
 
-    @Override
-    public void onClick(View view) {
-        UiUtils.hideKeyboard(mEditor);
-        if (view == mCancelButton) {
-            onCancel();
+    override fun onClick(view: View) {
+        hideKeyboard(mEditor)
+        if (view === mCancelButton) {
+            onCancel()
         } else if (!mHasStartedSearch) {
-            startSearch();
+            startSearch()
         } else {
-            mWebView.findNext(view == mNextButton);
+            mWebView.findNext(view === mNextButton)
         }
     }
 
-    private void startSearch() {
-        String query = getQuery();
+    private fun startSearch() {
+        val query = query
         if (TextUtils.isEmpty(query)) {
-            clearSearchResults();
-            mStatus.setText(null);
+            clearSearchResults()
+            mStatus.text = null
         } else {
-            mWebView.findAllAsync(query);
-            mHasStartedSearch = true;
+            mWebView.findAllAsync(query!!)
+            mHasStartedSearch = true
         }
-        updateStatusText();
+        updateStatusText()
     }
 
-    private void clearSearchResults() {
-        mCurrentResultPosition = -1;
-        mTotalResultCount = -1;
-        mWebView.clearMatches();
-        mHasStartedSearch = false;
+    private fun clearSearchResults() {
+        mCurrentResultPosition = -1
+        mTotalResultCount = -1
+        mWebView.clearMatches()
+        mHasStartedSearch = false
     }
 
-    private void updateNextAndPrevButtonEnabledState() {
-        boolean hasText = !TextUtils.isEmpty(getQuery());
-        UiUtils.setImageButtonEnabled(mPrevButton,
-                hasText && (!mHasStartedSearch || mCurrentResultPosition > 0));
-        UiUtils.setImageButtonEnabled(mNextButton,
-                hasText && (!mHasStartedSearch || mCurrentResultPosition < (mTotalResultCount - 1)));
+    private fun updateNextAndPrevButtonEnabledState() {
+        val hasText = !TextUtils.isEmpty(query)
+        setImageButtonEnabled(mPrevButton,
+                hasText && (!mHasStartedSearch || mCurrentResultPosition > 0))
+        setImageButtonEnabled(mNextButton,
+                hasText && (!mHasStartedSearch || mCurrentResultPosition < mTotalResultCount - 1))
     }
 
-    private void updateStatusText() {
+    private fun updateStatusText() {
         if (mTotalResultCount > 0) {
-            mStatus.setText((mCurrentResultPosition + 1) + "/" + mTotalResultCount);
+            mStatus.text = (mCurrentResultPosition + 1).toString() + "/" + mTotalResultCount
         } else {
-            mStatus.setText(null);
+            mStatus.text = null
         }
     }
 
-    private String getQuery() {
-        Editable s = mEditor.getText();
-        return s != null ? s.toString() : null;
+    private val query: String?
+        private get() {
+            val s = mEditor.text
+            return s?.toString()
+        }
+
+    interface OnCancelListener {
+        fun onCancelSearch()
     }
 
-    public interface OnCancelListener {
-        void onCancelSearch();
+    init {
+        mEditor.addTextChangedListener(this)
+        mEditor.setOnEditorActionListener(this)
+        mWebView.setFindListener(this)
+        mPrevButton.setOnClickListener(this)
+        mNextButton.setOnClickListener(this)
+        mCancelButton.setOnClickListener(this)
     }
 }

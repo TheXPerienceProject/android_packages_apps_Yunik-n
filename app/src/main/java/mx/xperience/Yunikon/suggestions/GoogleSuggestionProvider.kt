@@ -13,23 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package mx.xperience.Yunikon.suggestions;
-
-import androidx.annotation.NonNull;
+package mx.xperience.Yunikon.suggestions
 
 /**
  * Search suggestions provider for Google search engine.
  */
-class GoogleSuggestionProvider extends SuggestionProvider {
-    GoogleSuggestionProvider() {
-        super("UTF-8");
+internal class GoogleSuggestionProvider : SuggestionProvider("UTF-8") {
+    override fun createQueryUrl(query: String,
+                                language: String): String {
+        return ("https://www.google.com/complete/search?client=android&oe=utf8&ie=utf8"
+                + "&hl=" + language + "&q=" + query)
     }
 
-    @NonNull
-    protected String createQueryUrl(@NonNull String query,
-                                    @NonNull String language) {
-        return "https://www.google.com/complete/search?client=android&oe=utf8&ie=utf8"
-                + "&hl=" + language + "&q=" + query;
-    }
+
 }

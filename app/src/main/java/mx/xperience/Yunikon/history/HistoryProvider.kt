@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,228 +14,184 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.history;
+package mx.xperience.Yunikon.history
 
-import android.content.ContentProvider;
-import android.content.ContentResolver;
-import android.content.ContentUris;
-import android.content.ContentValues;
-import android.content.Context;
-import android.content.UriMatcher;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
-import android.database.sqlite.SQLiteQueryBuilder;
-import android.net.Uri;
-import android.provider.BaseColumns;
+import android.content.*
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+import android.database.sqlite.SQLiteQueryBuilder
+import android.net.Uri
+import android.provider.BaseColumns
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-public class HistoryProvider extends ContentProvider {
-    private static final int MATCH_ALL = 0;
-    private static final int MATCH_ID = 1;
-    private static final UriMatcher sURIMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-
-    static {
-        sURIMatcher.addURI(Columns.AUTHORITY, "history", MATCH_ALL);
-        sURIMatcher.addURI(Columns.AUTHORITY, "history/#", MATCH_ID);
-    }
-
-    private HistoryDbHelper mDbHelper;
-
-    public static void addOrUpdateItem(ContentResolver resolver, String title, String url) {
-        long existingId = -1;
-        Cursor cursor = resolver.query(Columns.CONTENT_URI, new String[]{Columns._ID},
-                Columns.URL + "=?", new String[]{url}, null);
-        if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                existingId = cursor.getLong(0);
+class HistoryProvider : ContentProvider() {
+    companion object {
+        private const val MATCH_ALL = 0
+        private const val MATCH_ID = 1
+        private val sURIMatcher = UriMatcher(UriMatcher.NO_MATCH)
+        fun addOrUpdateItem(resolver: ContentResolver, title: String?, url: String) {
+            var existingId: Long = -1
+            val cursor = resolver.query(Columns.CONTENT_URI, arrayOf(BaseColumns._ID),
+                    Columns.URL + "=?", arrayOf(url), null)
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    existingId = cursor.getLong(0)
+                }
+                cursor.close()
             }
-            cursor.close();
+            val values = ContentValues()
+            values.put(Columns.TITLE, title)
+            if (existingId >= 0) {
+                resolver.update(ContentUris.withAppendedId(Columns.CONTENT_URI, existingId),
+                        values, null, null)
+            } else {
+                values.put(Columns.TIMESTAMP, System.currentTimeMillis())
+                values.put(Columns.URL, url)
+                resolver.insert(Columns.CONTENT_URI, values)
+            }
         }
 
-        ContentValues values = new ContentValues();
-        values.put(Columns.TITLE, title);
-
-        if (existingId >= 0) {
-            resolver.update(ContentUris.withAppendedId(Columns.CONTENT_URI, existingId),
-                    values, null, null);
-        } else {
-            values.put(Columns.TIMESTAMP, System.currentTimeMillis());
-            values.put(Columns.URL, url);
-            resolver.insert(Columns.CONTENT_URI, values);
+        init {
+            sURIMatcher.addURI(Columns.AUTHORITY, "history", MATCH_ALL)
+            sURIMatcher.addURI(Columns.AUTHORITY, "history/#", MATCH_ID)
         }
     }
 
-    @Override
-    public boolean onCreate() {
-        mDbHelper = new HistoryDbHelper(getContext());
-        return true;
+    private var mDbHelper: HistoryDbHelper? = null
+    override fun onCreate(): Boolean {
+        mDbHelper = HistoryDbHelper(context)
+        return true
     }
 
-    @Nullable
-    @Override
-    public Cursor query(@NonNull Uri uri, @Nullable String[] projection,
-                        @Nullable String selection, @Nullable String[] selectionArgs,
-                        @Nullable String sortOrder) {
-        SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
-        int match = sURIMatcher.match(uri);
-
-        qb.setTables(HistoryDbHelper.DB_TABLE_HISTORY);
-
-        switch (match) {
-            case MATCH_ALL:
-                break;
-            case MATCH_ID:
-                qb.appendWhere(Columns._ID + " = " + uri.getLastPathSegment());
-                break;
-            default:
-                return null;
+    override fun query(uri: Uri, projection: Array<String>?,
+                       selection: String?, selectionArgs: Array<String>?,
+                       sortOrder: String?): Cursor? {
+        val qb = SQLiteQueryBuilder()
+        val match = sURIMatcher.match(uri)
+        qb.tables = HistoryDbHelper.DB_TABLE_HISTORY
+        when (match) {
+            MATCH_ALL -> {
+            }
+            MATCH_ID -> qb.appendWhere(BaseColumns._ID + " = " + uri.lastPathSegment)
+            else -> return null
         }
-
-        SQLiteDatabase db = mDbHelper.getReadableDatabase();
-        Cursor ret = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder);
-
-        ret.setNotificationUri(getContext().getContentResolver(), uri);
-
-        return ret;
+        val db = mDbHelper!!.readableDatabase
+        val ret = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder)
+        ret.setNotificationUri(context!!.contentResolver, uri)
+        return ret
     }
 
-    @Nullable
-    @Override
-    public String getType(@NonNull Uri uri) {
-        return null;
+    override fun getType(uri: Uri): String? {
+        return null
     }
 
-    @Nullable
-    @Override
-    public Uri insert(@NonNull Uri uri, @Nullable ContentValues values) {
+    override fun insert(uri: Uri, values: ContentValues?): Uri? {
         if (sURIMatcher.match(uri) != MATCH_ALL) {
-            return null;
+            return null
         }
-
         if (values != null && !values.containsKey(Columns.TIMESTAMP)) {
-            values.put(Columns.TIMESTAMP, System.currentTimeMillis() / 1000);
+            values.put(Columns.TIMESTAMP, System.currentTimeMillis() / 1000)
         }
-
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        long rowID = db.insert(HistoryDbHelper.DB_TABLE_HISTORY, null, values);
+        val db = mDbHelper!!.writableDatabase
+        val rowID = db.insert(HistoryDbHelper.DB_TABLE_HISTORY, null, values)
         if (rowID <= 0) {
-            return null;
+            return null
         }
-
-        getContext().getContentResolver().notifyChange(Columns.CONTENT_URI, null);
-
-        return ContentUris.withAppendedId(Columns.CONTENT_URI, rowID);
+        context!!.contentResolver.notifyChange(Columns.CONTENT_URI, null)
+        return ContentUris.withAppendedId(Columns.CONTENT_URI, rowID)
     }
 
-    @Override
-    public int update(@NonNull Uri uri, @Nullable ContentValues values,
-                      @Nullable String selection, @Nullable String[] selectionArgs) {
-        int count;
-        int match = sURIMatcher.match(uri);
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-
-        switch (match) {
-            case MATCH_ALL:
-                count = db.update(HistoryDbHelper.DB_TABLE_HISTORY,
-                        values, selection, selectionArgs);
-                break;
-            case MATCH_ID:
+    override fun update(uri: Uri, values: ContentValues?,
+                        selection: String?, selectionArgs: Array<String>?): Int {
+        val count: Int
+        val match = sURIMatcher.match(uri)
+        val db = mDbHelper!!.writableDatabase
+        count = when (match) {
+            MATCH_ALL -> db.update(HistoryDbHelper.DB_TABLE_HISTORY,
+                    values, selection, selectionArgs)
+            MATCH_ID -> {
                 if (selection != null || selectionArgs != null) {
-                    throw new UnsupportedOperationException(
-                            "Cannot update URI " + uri + " with a where clause");
+                    throw UnsupportedOperationException(
+                            "Cannot update URI $uri with a where clause")
                 }
-                count = db.update(HistoryDbHelper.DB_TABLE_HISTORY, values, Columns._ID + " = ?",
-                        new String[]{uri.getLastPathSegment()});
-                break;
-            default:
-                throw new UnsupportedOperationException("Cannot update that URI: " + uri);
+                db.update(HistoryDbHelper.DB_TABLE_HISTORY, values, BaseColumns._ID + " = ?", arrayOf(uri.lastPathSegment))
+            }
+            else -> throw UnsupportedOperationException("Cannot update that URI: $uri")
         }
-
         if (count > 0) {
-            getContext().getContentResolver().notifyChange(Columns.CONTENT_URI, null);
+            context!!.contentResolver.notifyChange(Columns.CONTENT_URI, null)
         }
-
-        return count;
+        return count
     }
 
-    @Override
-    public int delete(@NonNull Uri uri, @Nullable String selection,
-                      @Nullable String[] selectionArgs) {
-        int match = sURIMatcher.match(uri);
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-
-        switch (match) {
-            case MATCH_ALL:
-                break;
-            case MATCH_ID:
+    override fun delete(uri: Uri, selection: String?,
+                        selectionArgs: Array<String>?): Int {
+        var selection = selection
+        var selectionArgs = selectionArgs
+        val match = sURIMatcher.match(uri)
+        val db = mDbHelper!!.writableDatabase
+        when (match) {
+            MATCH_ALL -> {
+            }
+            MATCH_ID -> {
                 if (selection != null || selectionArgs != null) {
-                    throw new UnsupportedOperationException(
-                            "Cannot delete URI " + uri + " with a where clause");
+                    throw UnsupportedOperationException(
+                            "Cannot delete URI $uri with a where clause")
                 }
-                selection = Columns._ID + " = ?";
-                selectionArgs = new String[]{uri.getLastPathSegment()};
-                break;
-            default:
-                throw new UnsupportedOperationException("Cannot delete the URI " + uri);
+                selection = BaseColumns._ID + " = ?"
+                selectionArgs = uri.lastPathSegment?.let { arrayOf(it) }!!
+            }
+            else -> throw UnsupportedOperationException("Cannot delete the URI $uri")
         }
-
-        int count = db.delete(HistoryDbHelper.DB_TABLE_HISTORY, selection, selectionArgs);
-
+        val count = db.delete(HistoryDbHelper.DB_TABLE_HISTORY, selection, selectionArgs)
         if (count > 0) {
-            getContext().getContentResolver().notifyChange(Columns.CONTENT_URI, null);
+            context!!.contentResolver.notifyChange(Columns.CONTENT_URI, null)
         }
-
-        return count;
+        return count
     }
 
-    public interface Columns extends BaseColumns {
-        String AUTHORITY = "mx.xperience.Yunikon.history";
-        Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/history");
-
-        String TITLE = "title";
-        String URL = "url";
-        String TIMESTAMP = "timestamp";
+    interface Columns : BaseColumns {
+        companion object {
+            const val AUTHORITY = "mx.xperience.Yunikon.history"
+            val CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/history")
+            const val TITLE = "title"
+            const val URL = "url"
+            const val TIMESTAMP = "timestamp"
+        }
     }
 
-    private static class HistoryDbHelper extends SQLiteOpenHelper {
-        private static final int DB_VERSION = 2;
-        private static final String DB_NAME = "HistoryDatabase";
-        private static final String DB_TABLE_HISTORY = "history";
-
-        HistoryDbHelper(Context context) {
-            super(context, DB_NAME, null, DB_VERSION);
-        }
-
-        @Override
-        public void onCreate(SQLiteDatabase db) {
+    private class HistoryDbHelper internal constructor(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
+        override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE " + DB_TABLE_HISTORY + " (" +
-                    Columns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     Columns.TIMESTAMP + " INTEGER NOT NULL, " +
                     Columns.TITLE + " TEXT, " +
-                    Columns.URL + " TEXT)");
+                    Columns.URL + " TEXT)")
         }
 
-        @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             if (oldVersion < 2) {
                 // Recreate table with now auto-incrementing id column,
                 // renaming the old id column to timestamp
                 db.execSQL("CREATE TABLE " + DB_TABLE_HISTORY + "_new (" +
-                        Columns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                        BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                         Columns.TIMESTAMP + " INTEGER NOT NULL, " +
                         Columns.TITLE + " TEXT, " +
-                        Columns.URL + " TEXT)");
+                        Columns.URL + " TEXT)")
                 db.execSQL("INSERT INTO " + DB_TABLE_HISTORY + "_new("
                         + Columns.TITLE + ", " + Columns.URL + ", " + Columns.TIMESTAMP
                         + ") SELECT " + Columns.TITLE + ", " + Columns.URL + ", id"
-                        + " FROM " + DB_TABLE_HISTORY);
-                db.execSQL("DROP TABLE " + DB_TABLE_HISTORY);
+                        + " FROM " + DB_TABLE_HISTORY)
+                db.execSQL("DROP TABLE " + DB_TABLE_HISTORY)
                 db.execSQL("ALTER TABLE " + DB_TABLE_HISTORY
-                        + "_new RENAME TO " + DB_TABLE_HISTORY);
+                        + "_new RENAME TO " + DB_TABLE_HISTORY)
             }
+        }
+
+        companion object {
+            private const val DB_VERSION = 2
+            private const val DB_NAME = "HistoryDatabase"
+            const val DB_TABLE_HISTORY = "history"
         }
     }
 }

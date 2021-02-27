@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,56 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package mx.xperience.Yunikon.suggestions
 
-package mx.xperience.Yunikon.suggestions;
-
-import android.text.TextUtils;
-import android.util.Log;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import org.json.JSONArray;
-import mx.xperience.Yunikon.utils.FileUtils;
-
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.TimeUnit;
+import android.text.TextUtils
+import android.util.Log
+import org.json.JSONArray
+import mx.xperience.Yunikon.utils.FileUtils
+import java.io.BufferedInputStream
+import java.io.IOException
+import java.io.UnsupportedEncodingException
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 /**
  * The base search suggestions API. Provides common
  * fetching and caching functionality for each potential
  * suggestions provider.
  */
-abstract class SuggestionProvider {
-    private static final String TAG = "SuggestionProvider";
-    private static final long INTERVAL_DAY = TimeUnit.DAYS.toSeconds(1);
-    private static final String DEFAULT_LANGUAGE = "en";
-    @NonNull
-    private final String mEncoding;
-    @NonNull
-    private final String mLanguage;
+internal abstract class SuggestionProvider(private val mEncoding: String) {
+    private val mLanguage: String
 
-    SuggestionProvider(@NonNull String encoding) {
-        mEncoding = encoding;
-        mLanguage = getLanguage();
-    }
 
-    @NonNull
-    private static String getLanguage() {
-        String language = Locale.getDefault().getLanguage();
-        if (TextUtils.isEmpty(language)) {
-            language = DEFAULT_LANGUAGE;
-        }
-        return language;
+    init {
+        mLanguage = language
     }
 
     /**
@@ -72,26 +49,28 @@ abstract class SuggestionProvider {
      * @param language the locale of the user.
      * @return should return a URL that can be fetched using a GET.
      */
-    @NonNull
-    protected abstract String createQueryUrl(@NonNull String query,
-                                             @NonNull String language);
+    protected abstract fun createQueryUrl(query: String,
+                                          language: String): String
 
     /**
-     * Parse the results of an input stream into a list of {@link String}.
+     * Parse the results of an input stream into a list of [String].
      *
      * @param content  the raw input to parse.
      * @param callback the callback to invoke for each received suggestion
      * @throws Exception throw an exception if anything goes wrong.
      */
-    void parseResults(@NonNull String content,
-                      @NonNull ResultCallback callback) throws Exception {
-        JSONArray respArray = new JSONArray(content);
-        JSONArray jsonArray = respArray.getJSONArray(1);
-        for (int n = 0, size = jsonArray.length(); n < size; n++) {
-            String suggestion = jsonArray.getString(n);
+    open fun parseResults(content: String,
+                          callback: ResultCallback) {
+        val respArray = JSONArray(content)
+        val jsonArray = respArray.getJSONArray(1)
+        var n = 0
+        val size = jsonArray.length()
+        while (n < size) {
+            val suggestion = jsonArray.getString(n)
             if (!callback.addResult(suggestion)) {
-                break;
+                break
             }
+            n++
         }
     }
 
@@ -101,34 +80,28 @@ abstract class SuggestionProvider {
      * @param rawQuery the raw query to retrieve the results for.
      * @return a list of history items for the query.
      */
-    @NonNull
-    final List<String> fetchResults(@NonNull final String rawQuery) {
-        List<String> filter = new ArrayList<>(5);
-
-        String query;
+    fun fetchResults(rawQuery: String): List<String> {
+        val filter: MutableList<String> = ArrayList(5)
+        val query: String = try {
+            URLEncoder.encode(rawQuery, mEncoding)
+        } catch (e: UnsupportedEncodingException) {
+            Log.e(TAG, "Unable to encode the URL", e)
+            return filter
+        }
+        val content = downloadSuggestionsForQuery(query, mLanguage)
+                ?: // There are no suggestions for this query, return an empty list.
+                return filter
         try {
-            query = URLEncoder.encode(rawQuery, mEncoding);
-        } catch (UnsupportedEncodingException e) {
-            Log.e(TAG, "Unable to encode the URL", e);
-
-            return filter;
+            parseResults(content, object : ResultCallback {
+                override fun addResult(suggestion: String): Boolean {
+                    filter.add(suggestion)
+                    return filter.size < 5
+                }
+            })
+        } catch (e: Exception) {
+            Log.e(TAG, "Unable to parse results", e)
         }
-
-        String content = downloadSuggestionsForQuery(query, mLanguage);
-        if (content == null) {
-            // There are no suggestions for this query, return an empty list.
-            return filter;
-        }
-        try {
-            parseResults(content, suggestion -> {
-                filter.add(suggestion);
-                return filter.size() < 5;
-            });
-        } catch (Exception e) {
-            Log.e(TAG, "Unable to parse results", e);
-        }
-
-        return filter;
+        return filter
     }
 
     /**
@@ -138,46 +111,56 @@ abstract class SuggestionProvider {
      * @param query the query to get suggestions for
      * @return the cache file containing the suggestions
      */
-    @Nullable
-    private String downloadSuggestionsForQuery(@NonNull String query,
-                                               @NonNull String language) {
+    private fun downloadSuggestionsForQuery(query: String,
+                                            language: String): String? {
         try {
-            URL url = new URL(createQueryUrl(query, language));
-
-            HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+            val url = URL(createQueryUrl(query, language))
+            val urlConnection = url.openConnection() as HttpURLConnection
             urlConnection.addRequestProperty("Cache-Control",
-                    "max-age=" + INTERVAL_DAY + ", max-stale=" + INTERVAL_DAY);
-            urlConnection.addRequestProperty("Accept-Charset", mEncoding);
-            try (InputStream in = new BufferedInputStream(urlConnection.getInputStream())) {
-                return FileUtils.readStringFromStream(in, getEncoding(urlConnection));
+                    "max-age=$INTERVAL_DAY, max-stale=$INTERVAL_DAY")
+            urlConnection.addRequestProperty("Accept-Charset", mEncoding)
+            try {
+                BufferedInputStream(urlConnection.inputStream).use {
+                    return FileUtils.readStringFromStream(it, getEncoding(urlConnection))
+                }
             } finally {
-                urlConnection.disconnect();
+                urlConnection.disconnect()
             }
-        } catch (IOException e) {
-            Log.e(TAG, "Problem getting search suggestions", e);
+        } catch (e: IOException) {
+            Log.e(TAG, "Problem getting search suggestions", e)
         }
-
-        return null;
+        return null
     }
 
-    private String getEncoding(HttpURLConnection connection) {
-        String contentEncoding = connection.getContentEncoding();
+    private fun getEncoding(connection: HttpURLConnection): String {
+        val contentEncoding = connection.contentEncoding
         if (contentEncoding != null) {
-            return contentEncoding;
+            return contentEncoding
         }
-
-        String contentType = connection.getContentType();
-        for (String value : contentType.split(";")) {
-            value = value.trim();
+        val contentType = connection.contentType
+        for (value in contentType.split(";").toTypedArray().map { str -> str.trim { it <= ' ' } }) {
             if (value.toLowerCase(Locale.US).startsWith("charset=")) {
-                return value.substring(8);
+                return value.substring(8)
             }
         }
-
-        return mEncoding;
+        return mEncoding
     }
 
-    interface ResultCallback {
-        boolean addResult(String suggestion);
+    internal interface ResultCallback {
+        fun addResult(suggestion: String): Boolean
+    }
+
+    companion object {
+        private const val TAG = "SuggestionProvider"
+        private val INTERVAL_DAY = TimeUnit.DAYS.toSeconds(1)
+        private const val DEFAULT_LANGUAGE = "en"
+        private val language: String
+            get() {
+                var language = Locale.getDefault().language
+                if (TextUtils.isEmpty(language)) {
+                    language = DEFAULT_LANGUAGE
+                }
+                return language
+            }
     }
 }

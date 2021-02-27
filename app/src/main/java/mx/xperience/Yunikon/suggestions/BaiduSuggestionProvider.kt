@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,22 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package mx.xperience.Yunikon.suggestions;
-
-import androidx.annotation.NonNull;
+package mx.xperience.Yunikon.suggestions
 
 /**
  * Search suggestions provider for the Baidu search engine.
  */
-class BaiduSuggestionProvider extends SuggestionProvider {
-    BaiduSuggestionProvider() {
-        super("UTF-8");
-    }
-
-    @NonNull
-    protected String createQueryUrl(@NonNull String query,
-                                    @NonNull String language) {
-        return "http://suggestion.baidu.com/s?ie=UTF-8&wd=" + query + "&action=opensearch";
+internal class BaiduSuggestionProvider : SuggestionProvider("UTF-8") {
+    override fun createQueryUrl(query: String,
+                                language: String): String {
+        return "http://suggestion.baidu.com/s?ie=UTF-8&wd=$query&action=opensearch"
     }
 }

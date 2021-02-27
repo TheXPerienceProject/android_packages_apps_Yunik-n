@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,50 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.ui;
+package mx.xperience.Yunikon.ui
 
-import android.content.Context;
-import android.util.AttributeSet;
-import android.view.View;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.content.Context
+import android.util.AttributeSet
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.annotation.StringRes
+import mx.xperience.Yunikon.R
 
-import mx.xperience.Yunikon.R;
-import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
+class KeyValueView : LinearLayout {
+    private var mKeyView: TextView? = null
+    private var mValueView: TextView? = null
 
-public class KeyValueView extends LinearLayout {
-    private TextView mKeyView;
-    private TextView mValueView;
-
-    public KeyValueView(Context context) {
-        super(context);
-        init();
+    constructor(context: Context?) : super(context) {
+        init()
     }
 
-    public KeyValueView(Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
-        init();
+    constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
+        init()
     }
 
-    public KeyValueView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-        init();
+    constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
+        init()
     }
 
-    private void init() {
-        inflate(getContext(), R.layout.key_value_view, this);
-
-        mKeyView = findViewById(R.id.key);
-        mValueView = findViewById(R.id.value);
+    private fun init() {
+        inflate(context, R.layout.key_value_view, this)
+        mKeyView = findViewById(R.id.key)
+        mValueView = findViewById(R.id.value)
     }
 
-    public void setText(@StringRes int attributeTextResId, String value) {
+    fun setText(@StringRes attributeTextResId: Int, value: String) {
         if (!value.isEmpty()) {
-            this.mKeyView.setText(attributeTextResId);
-            this.mValueView.setText(value);
+            mKeyView!!.setText(attributeTextResId)
+            mValueView!!.text = value
         } else {
-            setVisibility(View.GONE);
+            visibility = GONE
         }
     }
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package mx.xperience.Yunikon.utils
 
-package mx.xperience.Yunikon.utils;
+import java.io.BufferedReader
+import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
 
-import androidx.annotation.NonNull;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
-public class FileUtils {
-    @NonNull
-    public static String readStringFromStream(@NonNull InputStream inputStream,
-                                              @NonNull String encoding) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, encoding));
-        StringBuilder result = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            result.append(line);
+object FileUtils {
+    @JvmStatic
+    @Throws(IOException::class)
+    fun readStringFromStream(inputStream: InputStream,
+                             encoding: String): String {
+        val reader = BufferedReader(InputStreamReader(inputStream, encoding))
+        val result = StringBuilder()
+        var line: String?
+        while (reader.readLine().also { line = it } != null) {
+            result.append(line)
         }
-        return result.toString();
+        return result.toString()
     }
 }

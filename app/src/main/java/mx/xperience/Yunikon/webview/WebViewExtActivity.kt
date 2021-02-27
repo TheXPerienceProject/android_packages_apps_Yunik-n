@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,29 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.webview;
+package mx.xperience.Yunikon.webview
 
-import android.graphics.Bitmap;
-import android.view.View;
-import android.webkit.WebChromeClient;
+import android.graphics.Bitmap
+import android.view.View
+import android.webkit.WebChromeClient.CustomViewCallback
+import androidx.appcompat.app.AppCompatActivity
 
-import androidx.appcompat.app.AppCompatActivity;
-
-public abstract class WebViewExtActivity extends AppCompatActivity {
-
-    public abstract void downloadFileAsk(String url, String contentDisposition, String mimeType);
-
-    public abstract boolean hasLocationPermission();
-
-    public abstract void requestLocationPermission();
-
-    public abstract void showSheetMenu(String url, boolean shouldAllowDownload);
-
-    public abstract void onThemeColorSet(int color);
-
-    public abstract void onFaviconLoaded(Bitmap favicon);
-
-    public abstract void onShowCustomView(View view, WebChromeClient.CustomViewCallback callback);
-
-    public abstract void onHideCustomView();
+abstract class WebViewExtActivity : AppCompatActivity() {
+    abstract fun downloadFileAsk(url: String?, contentDisposition: String?, mimeType: String?)
+    abstract fun hasLocationPermission(): Boolean
+    abstract fun requestLocationPermission()
+    abstract fun showSheetMenu(url: String?, shouldAllowDownload: Boolean)
+    abstract fun onThemeColorSet(color: Int)
+    abstract fun onFaviconLoaded(favicon: Bitmap?)
+    abstract fun onShowCustomView(view: View?, callback: CustomViewCallback?)
+    abstract fun onHideCustomView()
 }

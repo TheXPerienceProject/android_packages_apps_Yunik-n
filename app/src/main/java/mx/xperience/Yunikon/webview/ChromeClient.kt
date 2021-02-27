@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,108 +14,81 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package mx.xperience.Yunikon.webview;
+package mx.xperience.Yunikon.webview
 
-import android.content.ActivityNotFoundException;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.net.Uri;
-import android.os.Message;
-import android.view.View;
-import android.webkit.GeolocationPermissions;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
-import android.webkit.WebView;
-import android.widget.ProgressBar;
-import android.widget.Toast;
+import android.content.ActivityNotFoundException
+import android.graphics.Bitmap
+import android.net.Uri
+import android.os.Message
+import android.view.View
+import android.webkit.GeolocationPermissions
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.widget.ProgressBar
+import android.widget.Toast
+import mx.xperience.Yunikon.R
+import mx.xperience.Yunikon.history.HistoryProvider
+import mx.xperience.Yunikon.ui.UrlBarController
+import mx.xperience.Yunikon.utils.TabUtils.openInNewTab
 
-import mx.xperience.Yunikon.R;
-import mx.xperience.Yunikon.history.HistoryProvider;
-import mx.xperience.Yunikon.ui.UrlBarController;
-import mx.xperience.Yunikon.utils.TabUtils;
-
-class ChromeClient extends WebChromeClientCompat {
-    private final WebViewExtActivity mActivity;
-    private final boolean mIncognito;
-
-    private final UrlBarController mUrlBarController;
-    private final ProgressBar mProgressBar;
-
-    ChromeClient(WebViewExtActivity activity, boolean incognito,
-                 UrlBarController urlBarController, ProgressBar progressBar) {
-        super();
-        mActivity = activity;
-        mIncognito = incognito;
-        mUrlBarController = urlBarController;
-        mProgressBar = progressBar;
+internal class ChromeClient(
+        private val mActivity: WebViewExtActivity,
+        private val mIncognito: Boolean,
+        private val mUrlBarController: UrlBarController,
+        private val mProgressBar: ProgressBar) : WebChromeClient() {
+    override fun onProgressChanged(view: WebView, progress: Int) {
+        mProgressBar.visibility = if (progress == 100) View.INVISIBLE else View.VISIBLE
+        mProgressBar.progress = if (progress == 100) 0 else progress
+        super.onProgressChanged(view, progress)
     }
 
-    @Override
-    public void onProgressChanged(WebView view, int progress) {
-        mProgressBar.setVisibility(progress == 100 ? View.INVISIBLE : View.VISIBLE);
-        mProgressBar.setProgress(progress == 100 ? 0 : progress);
-        super.onProgressChanged(view, progress);
-    }
-
-    @Override
-    public void onThemeColorChanged(WebView view, int color) {
-        mActivity.onThemeColorSet(color);
-        super.onThemeColorChanged(view, color);
-    }
-
-    @Override
-    public void onReceivedTitle(WebView view, String title) {
-        mUrlBarController.onTitleReceived(title);
+    override fun onReceivedTitle(view: WebView, title: String) {
+        mUrlBarController.onTitleReceived(title)
         if (!mIncognito) {
-            HistoryProvider.addOrUpdateItem(mActivity.getContentResolver(), title, view.getUrl());
+            view.url?.let { HistoryProvider.addOrUpdateItem(mActivity.contentResolver, title, it) }
         }
     }
 
-    @Override
-    public void onReceivedIcon(WebView view, Bitmap icon) {
-        mActivity.onFaviconLoaded(icon);
+    override fun onReceivedIcon(view: WebView, icon: Bitmap) {
+        mActivity.onFaviconLoaded(icon)
     }
 
-    @Override
-    public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> path,
-                                     FileChooserParams params) {
-        Intent intent = params.createIntent();
+    override fun onShowFileChooser(view: WebView, path: ValueCallback<Array<Uri>>,
+                                   params: FileChooserParams): Boolean {
+        val intent = params.createIntent()
         try {
-            mActivity.startActivity(intent);
-        } catch (ActivityNotFoundException e) {
+            mActivity.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
             Toast.makeText(mActivity, mActivity.getString(R.string.error_no_activity_found),
-                    Toast.LENGTH_LONG).show();
-            return false;
+                    Toast.LENGTH_LONG).show()
+            return false
         }
-        return true;
+        return true
     }
 
-    @Override
-    public void onGeolocationPermissionsShowPrompt(String origin,
-                                                   GeolocationPermissions.Callback callback) {
+    override fun onGeolocationPermissionsShowPrompt(origin: String,
+                                                    callback: GeolocationPermissions.Callback) {
         if (!mActivity.hasLocationPermission()) {
-            mActivity.requestLocationPermission();
+            mActivity.requestLocationPermission()
         } else {
-            callback.invoke(origin, true, false);
+            callback.invoke(origin, true, false)
         }
     }
 
-    @Override
-    public void onShowCustomView(View view, WebChromeClient.CustomViewCallback callback) {
-        mActivity.onShowCustomView(view, callback);
+    override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+        mActivity.onShowCustomView(view, callback)
     }
 
-    @Override
-    public void onHideCustomView() {
-        mActivity.onHideCustomView();
+    override fun onHideCustomView() {
+        mActivity.onHideCustomView()
     }
 
-    @Override
-    public boolean onCreateWindow(WebView view, boolean isDialog,
-                                  boolean isUserGesture, Message resultMsg) {
-        WebView.HitTestResult result = view.getHitTestResult();
-        String url = result.getExtra();
-        TabUtils.openInNewTab(mActivity, url, mIncognito);
-        return true;
+    override fun onCreateWindow(view: WebView, isDialog: Boolean,
+                                isUserGesture: Boolean, resultMsg: Message): Boolean {
+        val result = view.hitTestResult
+        val url = result.extra
+        openInNewTab(mActivity, url, mIncognito)
+        return true
     }
 }

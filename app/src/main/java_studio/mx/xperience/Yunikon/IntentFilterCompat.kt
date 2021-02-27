@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The LineageOS Project
+ * Copyright (C) 2021 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package mx.xperience.Yunikon
 
-package mx.xperience.Yunikon;
+import android.content.IntentFilter
 
-import android.content.IntentFilter;
-
-public class IntentFilterCompat {
-    public static boolean filterIsBrowser(IntentFilter filter) {
-        return filter.countDataAuthorities() == 0;
+object IntentFilterCompat {
+    @JvmStatic
+    fun filterIsBrowser(filter: IntentFilter): Boolean {
+        return filter.countDataAuthorities() == 0
     }
 }
